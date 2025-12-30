@@ -3,14 +3,7 @@ package engine
 import "core:fmt"
 import rl "vendor:raylib"
 
-getPlayerInputs :: proc(ctx: ^GameContext) -> [2]f32 {
-	input: [2]f32
-	if rl.IsKeyDown(.UP) do input.y -= 1
-	if rl.IsKeyDown(.DOWN) do input.y += 1
-	if rl.IsKeyDown(.LEFT) do input.x -= 1
-	if rl.IsKeyDown(.RIGHT) do input.x += 1
-	if rl.IsKeyDown(.Q) || rl.IsKeyDown(.ESCAPE) do ctx.quit = true
-
+getInputs :: proc(ctx: ^GameContext) {
 	// Check for "Modifier" key (Ctrl or Command)
 	if rl.IsKeyDown(.LEFT_CONTROL) || rl.IsKeyDown(.LEFT_SUPER) {
 		// Debug camera
@@ -20,8 +13,6 @@ getPlayerInputs :: proc(ctx: ^GameContext) -> [2]f32 {
 		// Debug entities
 		if rl.IsKeyPressed(.E) do ctx.debugMode.entities = !ctx.debugMode.entities
 	}
-
-	return input
 }
 
 DebugMode :: struct {
@@ -46,9 +37,9 @@ deleteGameContext :: proc(self: ^GameContext) {
 
 // Update physics, inputs, etc.
 update_game :: proc(self: ^GameContext) {
+	getInputs(self)
 	self.world.cursor.position = rl.GetMousePosition()
-	// movement := getPlayerInputs(self)
-	// TODO : should be the player only...
+	pointingToEntity: bool = false
 	for &entity in self.world.entities {
 		if rl.CheckCollisionPointRec(
 			self.world.cursor.position,
@@ -59,6 +50,7 @@ update_game :: proc(self: ^GameContext) {
 				height = f32(self.world.assets.textures[entity.textureId].height),
 			},
 		) {
+			pointingToEntity = true
 			if rl.IsMouseButtonDown(rl.MouseButton.LEFT) {
 				rl.DrawText(
 					fmt.ctprintf("%s", entity.onClick()),
@@ -79,6 +71,8 @@ update_game :: proc(self: ^GameContext) {
 		}
 		// moveEntity(&entity, movement, self)
 	}
+	if pointingToEntity do changeCursorStyle(&self.world.cursor, CursorStyle.Pointing)
+	else do changeCursorStyle(&self.world.cursor, CursorStyle.Default)
 }
 
 // Render all entities of the game
@@ -90,28 +84,34 @@ render_game :: proc(self: ^GameContext) {
 		texture := rTexture.(rl.Texture)
 		rl.DrawTextureV(texture, entity.position, rl.WHITE)
 	}
+	// Draw the cursor with its latest associated style
+	drawCursor(&self.world.cursor)
 	endCamera(&self.world.camera)
 }
 
 // Render the UI (mainly for debug)
 render_ui :: proc(self: ^GameContext) {
 	beginCamera(&self.world.camera)
+	fontSize: i32 = 18
+	defaultX: i32 = 10
 	if self.debugMode.informations {
-		rl.DrawFPS(10, 10)
+		rl.DrawFPS(defaultX, 10)
+		msw_pos_str := fmt.ctprint("msw project")
+		rl.DrawText(msw_pos_str, defaultX, 35, fontSize, rl.YELLOW)
 		// Display actual camera coordinates for debugging
 		cam_pos_str := fmt.ctprintf(
 			"Cam Target: %.2f, %.2f",
 			self.world.camera.object.offset.x,
 			self.world.camera.object.offset.y,
 		)
-		rl.DrawText(cam_pos_str, 10, 55, 20, rl.YELLOW)
+		rl.DrawText(cam_pos_str, defaultX, 55, fontSize, rl.YELLOW)
 		// Display cursor position
 		cursor_pos_str := fmt.ctprintf(
 			"Cursor: %.2f, %.2f",
 			self.world.cursor.position.x,
 			self.world.cursor.position.y,
 		)
-		rl.DrawText(cursor_pos_str, 10, 80, 20, rl.YELLOW)
+		rl.DrawText(cursor_pos_str, defaultX, 75, fontSize, rl.YELLOW)
 	}
 
 
