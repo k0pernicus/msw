@@ -1,0 +1,40 @@
+{
+    "version": "2.0.0",
+    "command": "",
+    "args": [],
+    "tasks": [
+        {
+            "label": "mkdir",
+            "type": "shell",
+            "command": "mkdir",
+            "args": [
+                "-p",
+                "build/"
+            ]
+        },
+        {
+            "label": "odin_build_debug",
+            "type": "shell",
+            "command": "make debug"
+        },
+        {
+            "label": "odin_build_release",
+            "type": "shell",
+            "command": "make release"
+        },
+        {
+            "label": "Build debug",
+            "dependsOn": [
+                "mkdir",
+                "odin_build_debug"
+            ]
+        },
+        {
+            "label": "Build release",
+            "dependsOn": [
+                "mkdir",
+                "odin_build_release"
+            ]
+        }
+    ]
+}

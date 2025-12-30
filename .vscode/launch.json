@@ -1,0 +1,18 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "preLaunchTask": "Build debug",
+            "name": "Debug program",
+            "program": "${workspaceFolder}/build/msw-debug",
+            "args": [
+                "--",
+                "--highdpi",
+                "--vsync",
+            ],
+            "cwd": "${workspaceFolder}",
+        }
+    ]
+}

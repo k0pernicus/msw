@@ -1,0 +1,147 @@
+package engine
+
+import "core:fmt"
+import rl "vendor:raylib"
+
+getPlayerInputs :: proc(ctx: ^GameContext) -> [2]f32 {
+	input: [2]f32
+	if rl.IsKeyDown(.UP) do input.y -= 1
+	if rl.IsKeyDown(.DOWN) do input.y += 1
+	if rl.IsKeyDown(.LEFT) do input.x -= 1
+	if rl.IsKeyDown(.RIGHT) do input.x += 1
+	if rl.IsKeyDown(.Q) || rl.IsKeyDown(.ESCAPE) do ctx.quit = true
+
+	// Check for "Modifier" key (Ctrl or Command)
+	if rl.IsKeyDown(.LEFT_CONTROL) || rl.IsKeyDown(.LEFT_SUPER) {
+		// Debug camera
+		if rl.IsKeyPressed(.C) do ctx.debugMode.camera = !ctx.debugMode.camera
+		// Debug informations
+		if rl.IsKeyPressed(.I) do ctx.debugMode.informations = !ctx.debugMode.informations
+		// Debug entities
+		if rl.IsKeyPressed(.E) do ctx.debugMode.entities = !ctx.debugMode.entities
+	}
+
+	return input
+}
+
+DebugMode :: struct {
+	camera:       bool,
+	entities:     bool,
+	informations: bool,
+}
+
+// Handles all the information to run the game
+GameContext :: struct {
+	world:     World,
+	assets:    ^AssetContext,
+	quit:      bool,
+	debugMode: DebugMode,
+}
+
+deleteGameContext :: proc(self: ^GameContext) {
+	deleteAssetContext(self.assets)
+	deleteWorld(&self.world)
+	free(self.assets)
+}
+
+// Update physics, inputs, etc.
+update_game :: proc(self: ^GameContext) {
+	self.world.cursor.position = rl.GetMousePosition()
+	// movement := getPlayerInputs(self)
+	// TODO : should be the player only...
+	for &entity in self.world.entities {
+		if rl.CheckCollisionPointRec(
+			self.world.cursor.position,
+			rl.Rectangle {
+				x = entity.position.x,
+				y = entity.position.y,
+				width = f32(self.world.assets.textures[entity.textureId].width),
+				height = f32(self.world.assets.textures[entity.textureId].height),
+			},
+		) {
+			if rl.IsMouseButtonDown(rl.MouseButton.LEFT) {
+				rl.DrawText(
+					fmt.ctprintf("%s", entity.onClick()),
+					20,
+					self.world.size.y - 40,
+					15,
+					rl.RED,
+				)
+			} else {
+				rl.DrawText(
+					fmt.ctprintf("%s", entity.onHover()),
+					20,
+					self.world.size.y - 40,
+					15,
+					rl.RED,
+				)
+			}
+		}
+		// moveEntity(&entity, movement, self)
+	}
+}
+
+// Render all entities of the game
+render_game :: proc(self: ^GameContext) {
+	beginCamera(&self.world.camera)
+	for &entity in self.world.entities {
+		rTexture := getTexture(self.assets, entity.textureId)
+		if rTexture == nil do continue
+		texture := rTexture.(rl.Texture)
+		rl.DrawTextureV(texture, entity.position, rl.WHITE)
+	}
+	endCamera(&self.world.camera)
+}
+
+// Render the UI (mainly for debug)
+render_ui :: proc(self: ^GameContext) {
+	beginCamera(&self.world.camera)
+	if self.debugMode.informations {
+		rl.DrawFPS(10, 10)
+		// Display actual camera coordinates for debugging
+		cam_pos_str := fmt.ctprintf(
+			"Cam Target: %.2f, %.2f",
+			self.world.camera.object.offset.x,
+			self.world.camera.object.offset.y,
+		)
+		rl.DrawText(cam_pos_str, 10, 55, 20, rl.YELLOW)
+		// Display cursor position
+		cursor_pos_str := fmt.ctprintf(
+			"Cursor: %.2f, %.2f",
+			self.world.cursor.position.x,
+			self.world.cursor.position.y,
+		)
+		rl.DrawText(cursor_pos_str, 10, 80, 20, rl.YELLOW)
+	}
+
+
+	if self.debugMode.camera {
+		drawCameraDebug(&self.world.camera)
+	}
+
+	if self.debugMode.entities {
+		for &entity in self.world.entities {
+			rTexture := getTexture(self.assets, entity.textureId)
+			if rTexture == nil do continue
+			texture := rTexture.(rl.Texture)
+			rl.DrawText(
+				fmt.ctprintf("%s", entity.id),
+				i32(entity.position.x) - 10.0,
+				i32(entity.position.y) - 18.0,
+				10,
+				rl.BLACK,
+			)
+			rl.DrawRectangleLinesEx(
+				rl.Rectangle {
+					x = entity.position.x - 5.0,
+					y = entity.position.y - 5.0,
+					width = f32(texture.width) + 5.0,
+					height = f32(texture.height) + 5.0,
+				},
+				2.0,
+				rl.BLACK,
+			)
+		}
+	}
+	endCamera(&self.world.camera)
+}
