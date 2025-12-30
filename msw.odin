@@ -16,12 +16,11 @@ BACKGROUND_COLOR: rl.Color : rl.BLUE
 WIDTH: i32 : 1280
 HEIGHT: i32 : 720
 
-TARGET_FPS: i32 = 60
-
 // Define a struct representing your options
 GameOptions :: struct {
-	highdpi: bool `usage:"Enable HighDPI"`,
-	vsync:   bool `usage:"Vsync activation"`,
+	highdpi:  bool `usage:"Enable HighDPI"`,
+	vsync:    bool `usage:"Vsync activation"`,
+	fpslimit: i32 `usage:"Limit of FPS"`,
 }
 
 main :: proc() {
@@ -49,7 +48,8 @@ main :: proc() {
 	// Parse the flags
 	opt: GameOptions
 	style := flags.Parsing_Style.Unix
-	flags.parse_or_exit(&opt, os.args[1:], style)
+	if len(os.args) > 1 do flags.parse_or_exit(&opt, os.args[1:], style)
+
 	configFlags: rl.ConfigFlags
 	if opt.vsync do configFlags += {rl.ConfigFlag.VSYNC_HINT}
 	if opt.highdpi do configFlags += {rl.ConfigFlag.WINDOW_HIGHDPI}
@@ -71,15 +71,15 @@ main :: proc() {
 	engine.addEntity(
 		&ctx.world,
 		engine.newEntity(
-			"player",
+			"a cat",
 			"cat.png",
-			[2]f32{0.0, 0.0},
+			[2]f32{f32(WIDTH) / 2, f32(HEIGHT) / 2},
 			engine.actionSayMiaouh,
 			engine.actionSayGrrh,
 		),
 	)
 
-	rl.SetTargetFPS(TARGET_FPS)
+	if opt.fpslimit > 0 do rl.SetTargetFPS(opt.fpslimit)
 
 	for !rl.WindowShouldClose() && !ctx.quit {
 		engine.update_game(&ctx)
