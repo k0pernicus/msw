@@ -1,12 +1,14 @@
 package main
 
 import "core:flags"
-import "core:fmt"
 import "core:os"
 import "engine"
 import rl "vendor:raylib"
 
+// Necessary imports for debug
+import "core:fmt"
 import "core:mem"
+_ :: fmt
 _ :: mem
 
 BACKGROUND_COLOR: rl.Color : rl.BLUE
@@ -86,9 +88,7 @@ main :: proc() {
 		rl.ClearBackground(BACKGROUND_COLOR)
 
 		engine.render_game(&ctx)
-		when ODIN_DEBUG {
-			engine.render_ui(&ctx)
-		}
+		engine.render_ui(&ctx)
 
 		rl.EndDrawing()
 
