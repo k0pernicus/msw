@@ -4,6 +4,7 @@ import "core:flags"
 import "core:os"
 import "core:strings"
 import "engine"
+import "game"
 import rl "vendor:raylib"
 
 // Necessary imports for debug
@@ -60,36 +61,58 @@ main :: proc() {
 	rl.InitWindow(WIDTH, HEIGHT, "Odin + Raylib")
 	defer rl.CloseWindow()
 
+	assets, loadAssetsErr := engine.loadAssets()
+	if loadAssetsErr != nil {
+		fmt.eprintln("No assets found - no forward")
+		return
+	}
+
+	levels, loadLevelsErr := game.loadLevels()
+	if loadLevelsErr != nil {
+		fmt.eprintln("No levels found - no forward")
+		return
+	}
+	defer game.deleteLevels(&levels)
+
 	// Init the context of the game
 	ctx := engine.GameContext{}
 	ctx.assets = new(engine.AssetContext)
+	ctx.assets.levels = levels
 	engine.initWorld(&ctx.world, ctx.assets, WIDTH, HEIGHT)
 	ctx.quit = false
 
 	// Do not forget to free all object from the game context
 	defer engine.deleteGameContext(&ctx)
 
-	assets, err := engine.loadAssets()
-	if err != nil {
-		fmt.eprintln("No assets found - no forward")
-		return
-	}
-	for asset, idx in assets {
-		fmt.printfln("> [%d] loading asset with id '%s'", idx, asset.id)
+	// Take the first level
+	level1 := levels[0]
+
+	for entity, idx in level1.entities {
+		fmt.printfln(">[LEVEL1] [%d] loading asset with id '%s'", idx, entity.id)
+
+		textureFile: Maybe(string) = nil
+		for asset in assets {
+			if asset.id == entity.textureId {
+				textureFile = asset.textureFile
+			}
+		}
+		if textureFile == nil {
+			fmt.eprintfln(">> [ERROR] texture with id '%s' not found", entity.textureId)
+			continue
+		}
+
 		engine.addEntity(
 			&ctx.world,
 			// Copy the strings as everything is stored in temp_allocator
 			engine.newEntity(
-				strings.clone(asset.id),
-				strings.clone(asset.textureFile),
-				// How to retrieve this dynamically ???
-				[2]f32{f32(WIDTH) / 2, f32(HEIGHT) / 2},
-				engine.actionSayMiaouh,
-				engine.actionSayGrrh,
+				strings.clone(entity.id),
+				strings.clone(textureFile.(string)),
+				entity.position,
+				onClick = engine.actionSayMiaouh,
+				onHover = engine.actionSayGrrh,
 			),
 		)
 	}
-
 
 	if opt.fpslimit > 0 do rl.SetTargetFPS(opt.fpslimit)
 

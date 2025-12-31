@@ -1,5 +1,6 @@
 package engine
 
+import "../game"
 import "core:encoding/json"
 import "core:fmt"
 import "core:os"
@@ -7,11 +8,12 @@ import "core:strings"
 import rl "vendor:raylib"
 
 ASSETS_FOLDER := "assets/"
-ASSETS_DESCRIPTION := "desc.json"
+ASSETS_DESCRIPTION := "assets.json"
 
 AssetContext :: struct {
 	textures: map[string]rl.Texture,
 	fonts:    map[string]rl.Font,
+	levels:   []game.Level,
 }
 
 initAssets :: proc(assetCtx: ^AssetContext) {
@@ -73,6 +75,7 @@ loadTexture :: proc(self: ^AssetContext, assetName: string) -> (rl.Texture, Asse
 	if texture.id == 0 do return rl.Texture{}, .TextureLoadErr // texture does not exists
 	self.textures[assetName] = texture
 
+	fmt.printfln("Texture '%s' with id '%d' has been added", assetName, texture.id)
 	return texture, nil
 }
 

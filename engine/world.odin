@@ -7,6 +7,7 @@ import rl "vendor:raylib"
 World :: struct {
 	// To be freed with `deleteWorld` function
 	// when the world is not used anymore
+	// entities: [dynamic]Entity,
 	entities: [dynamic]Entity,
 	assets:   ^AssetContext,
 	camera:   Camera2D,
@@ -30,6 +31,9 @@ initWorld :: proc(self: ^World, assetCtx: ^AssetContext, screenWidth, screenHeig
 // Delete all items stored in the World object
 deleteWorld :: proc(self: ^World) {
 	deleteAssetContext(self.assets)
+	for &entity in self.entities {
+		deleteEntity(&entity)
+	}
 	delete_dynamic_array(self.entities)
 }
 

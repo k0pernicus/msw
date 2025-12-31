@@ -9,8 +9,8 @@ OnHoverAction :: proc() -> string
 // its current coordinates
 Entity :: struct {
 	id:        string,
-	position:  Coordinate2D,
 	textureId: string,
+	position:  Coordinate2D,
 	active:    bool,
 	onClick:   OnClickAction,
 	onHover:   OnHoverAction,
@@ -20,10 +20,20 @@ newEntity :: proc(
 	id: string,
 	textureId: string,
 	position: Coordinate2D = [2]f32{},
+	active: bool = false,
 	onClick: OnClickAction = noAction,
 	onHover: OnHoverAction = noAction,
 ) -> Entity {
-	return Entity{id, position, textureId, false, onClick, onHover}
+	return Entity{id, textureId, position, active, onClick, onHover}
+}
+
+deleteEntity :: proc(self: ^Entity) {
+	self.position = [2]f32{}
+	self.active = false
+	self.onClick = nil
+	self.onHover = nil
+	delete(self.id)
+	delete(self.textureId)
 }
 
 setActivity :: proc(self: ^Entity, activity: bool) {
