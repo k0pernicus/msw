@@ -37,7 +37,8 @@ deleteWorld :: proc(self: ^World) {
 // of the current World object
 addEntity :: proc(self: ^World, e: Entity) {
 	// Append the texture
-	if loadTexture(self.assets, e.textureId) == nil {
+	_, err := loadTexture(self.assets, e.textureId)
+	if err != nil {
 		fmt.eprintfln("[ERROR] cannot create entity with name '%s' : invalid textureId", e.id)
 		return
 	}

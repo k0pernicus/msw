@@ -2,6 +2,7 @@ package main
 
 import "core:flags"
 import "core:os"
+import "core:strings"
 import "engine"
 import rl "vendor:raylib"
 
@@ -68,16 +69,27 @@ main :: proc() {
 	// Do not forget to free all object from the game context
 	defer engine.deleteGameContext(&ctx)
 
-	engine.addEntity(
-		&ctx.world,
-		engine.newEntity(
-			"a cat",
-			"cat.png",
-			[2]f32{f32(WIDTH) / 2, f32(HEIGHT) / 2},
-			engine.actionSayMiaouh,
-			engine.actionSayGrrh,
-		),
-	)
+	assets, err := engine.loadAssets()
+	if err != nil {
+		fmt.eprintln("No assets found - no forward")
+		return
+	}
+	for asset, idx in assets {
+		fmt.printfln("> [%d] loading asset with id '%s'", idx, asset.id)
+		engine.addEntity(
+			&ctx.world,
+			// Copy the strings as everything is stored in temp_allocator
+			engine.newEntity(
+				strings.clone(asset.id),
+				strings.clone(asset.textureFile),
+				// How to retrieve this dynamically ???
+				[2]f32{f32(WIDTH) / 2, f32(HEIGHT) / 2},
+				engine.actionSayMiaouh,
+				engine.actionSayGrrh,
+			),
+		)
+	}
+
 
 	if opt.fpslimit > 0 do rl.SetTargetFPS(opt.fpslimit)
 
