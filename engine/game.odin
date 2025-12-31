@@ -15,6 +15,25 @@ getInputs :: proc(ctx: ^GameContext) {
 	}
 }
 
+cameraMovement :: proc(ctx: ^GameContext) {
+	STEP :: 5
+	if rl.IsKeyDown(.LEFT) {
+		fmt.printfln(">> HANDLED LEFT MOVEMENT")
+		ctx.world.camera.object.offset.x -= STEP
+	} else if rl.IsKeyDown(.RIGHT) {
+		fmt.printfln(">> HANDLED RIGHT MOVEMENT")
+		ctx.world.camera.object.offset.x += STEP
+	}
+
+	if rl.IsKeyDown(.UP) {
+		fmt.printfln(">> HANDLED UP MOVEMENT")
+		ctx.world.camera.object.offset.y -= STEP
+	} else if rl.IsKeyDown(.DOWN) {
+		fmt.printfln(">> HANDLED DOWN MOVEMENT")
+		ctx.world.camera.object.offset.y += STEP
+	}
+}
+
 DebugMode :: struct {
 	camera:       bool,
 	entities:     bool,
@@ -38,6 +57,7 @@ deleteGameContext :: proc(self: ^GameContext) {
 // Update physics, inputs, etc.
 update_game :: proc(self: ^GameContext) {
 	getInputs(self)
+	cameraMovement(self)
 	self.world.cursor.position = rl.GetMousePosition()
 	pointingToEntity: bool = false
 	for &entity in self.world.entities {
@@ -116,7 +136,7 @@ render_ui :: proc(self: ^GameContext) {
 
 
 	if self.debugMode.camera {
-		drawCameraDebug(&self.world.camera)
+		drawDynamicGrid(&self.world.camera)
 	}
 
 	if self.debugMode.entities {
