@@ -19,3 +19,14 @@ make debug
 # Release version
 make release
 ```
+
+## TODO
+
+[ ] An asset storage
+[ ] A level editor
+[ ] Save and load the levels (format to determine - binary could be great)
+[ ] An "Event processor" clicking or hovering game entities / game objects (replacement of OnClickAction and OnHoverAction events)
+[ ] Store the state of each entity in the game (premisce to store / load game)
+[ ] Sound and music basic management
+[ ] Camera management (rotation / (de-)zoom / ...)
+[ ] Option menu, with localization (English / French)
