@@ -1,5 +1,6 @@
 package engine
 
+import "core:fmt"
 import rl "vendor:raylib"
 
 Camera2D :: struct {
@@ -26,27 +27,43 @@ initCamera3D :: proc(position: [3]f32, target: [3]f32) -> Camera3D {
 	}
 }
 
+// TODO : replace with better code
 drawCameraDebug :: proc(camera: ^Camera2D) {
-	// 1. Unpack the target and current zoom regardless of 2D or 3D
-	target: [2]f32
-	zoom: f32 = 1.0
+	// Unpack data from your custom struct
+	zoom := camera.object.zoom
+	target := camera.object.target
 
-	// 2. Draw World Axes (The "Origin")
-	// Red line for X, Green line for Y
 	rl.DrawLineEx({-10000, 0}, {10000, 0}, 2.0 / zoom, rl.RED) // X-Axis
 	rl.DrawLineEx({0, -10000}, {0, 10000}, 2.0 / zoom, rl.GREEN) // Y-Axis
 
-	// 3. Draw a Grid (Optional but very helpful)
+	// Draw Grid and Coordinates
 	grid_size: f32 = 100.0
-	grid_color := rl.Color{200, 200, 200, 40} // Faint gray
-	for i: f32 = -10; i <= 10; i += 1 {
-		rl.DrawLineEx({i * grid_size, -1000}, {i * grid_size, 1000}, 1.0 / zoom, grid_color)
-		rl.DrawLineEx({-1000, i * grid_size}, {1000, i * grid_size}, 1.0 / zoom, grid_color)
+	grid_color := rl.Color{200, 200, 200, 80}
+	text_color := rl.Color{255, 255, 255, 200}
+
+	// Determine the range to draw (e.g., -10 to 10 grid cells)
+	for x: f32 = -10; x <= 10; x += 1 {
+		for y: f32 = -10; y <= 10; y += 1 {
+			world_x := x * grid_size
+			world_y := y * grid_size
+
+			// Draw the grid lines (only once per axis)
+			if y == -10 do rl.DrawLineEx({world_x, -1000}, {world_x, 1000}, 1.0 / zoom, grid_color)
+			if x == -10 do rl.DrawLineEx({-1000, world_y}, {1000, world_y}, 1.0 / zoom, grid_color)
+
+			// Draw the coordinate text at the intersection
+			coord_text := fmt.ctprintf("(%.0f, %.0f)", world_x, world_y)
+
+			// Adjust font size based on zoom so it stays readable
+			font_size := i32(10.0 / zoom)
+			if font_size < 5 do font_size = 5
+
+			rl.DrawText(coord_text, i32(world_x + 5), i32(world_y + 5), font_size, text_color)
+		}
 	}
 
-	// 4. Draw a crosshair at the Camera's Target point
-	// This helps you see if your "Position" logic is actually moving the camera
-	rl.DrawCircleV({target.x, target.y}, 5.0 / zoom, rl.YELLOW)
+	// Draw Target Crosshair
+	rl.DrawCircleV(target, 5.0 / zoom, rl.YELLOW)
 }
 
 // Move the camera by `movement`
