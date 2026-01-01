@@ -1,6 +1,6 @@
 package engine
 
-import "core:fmt"
+import "core:log"
 import rl "vendor:raylib"
 
 // Stored all objects related to a World
@@ -43,7 +43,7 @@ addEntity :: proc(self: ^World, e: Entity) {
 	// Append the texture
 	_, err := loadTexture(self.assets, e.textureId)
 	if err != nil {
-		fmt.eprintfln("[ERROR] cannot create entity with name '%s' : invalid textureId", e.id)
+		log.errorf("cannot create entity with name '%s' : invalid textureId", e.id)
 		return
 	}
 	append(&self.entities, e)

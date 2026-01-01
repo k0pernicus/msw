@@ -1,7 +1,7 @@
 package game
 
 import "core:encoding/json"
-import "core:fmt"
+import "core:log"
 import "core:os"
 import "core:strings"
 
@@ -65,25 +65,25 @@ loadLevels :: proc() -> ([]Level, LevelError) {
 	if !os.exists(levelsDescPath) do return nil, .OpenFileErr
 	fd, openErr := os.open(levelsDescPath, os.O_RDONLY)
 	if openErr != nil {
-		fmt.eprintfln("[ERROR] error opening levels description file: %s", openErr)
+		log.errorf("error opening levels description file: %s", openErr)
 		return nil, .OpenFileErr
 	}
 	fileSize, sizeErr := os.file_size(fd)
 	if sizeErr != nil {
-		fmt.eprintfln("[ERROR] error getting size of assets description file: %s", openErr)
+		log.errorf("error getting size of assets description file: %s", openErr)
 		return nil, .GetFileSizeErr
 	}
 	fileContent: []u8 = make([]u8, fileSize)
 	defer delete(fileContent)
 	if readBytes, err := os.read(fd, fileContent); err != nil || readBytes == 0 {
-		fmt.eprintfln("[ERROR] error reading levels description file: %s", err)
+		log.errorf("error reading levels description file: %s", err)
 		return nil, .ReadFileErr
 	}
 	description: []Level
 
 	// TODO : Check for a leak here
 	if err := json.unmarshal(fileContent, &description); err != nil {
-		fmt.eprintfln("[ERROR] error unmarshalling levels description file: %s", err)
+		log.errorf("error unmarshalling levels description file: %s", err)
 		return nil, .UnmarshalErr
 	}
 	return description, nil
@@ -118,7 +118,7 @@ saveLevel :: proc(
 	defer delete(levelsDescPath)
 
 	if success := os.write_entire_file(levelsDescPath, data); !success {
-		fmt.eprintfln("[ERROR] error writing bytes in file at path '%s'", levelsDescPath)
+		log.errorf("error writing bytes in file at path '%s'", levelsDescPath)
 		return .SaveFileErr
 	}
 

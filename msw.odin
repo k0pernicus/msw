@@ -1,6 +1,7 @@
 package main
 
 import "core:flags"
+import "core:log"
 import "core:os"
 import "core:strings"
 import "engine"
@@ -20,32 +21,16 @@ HEIGHT: i32 : 720
 
 // Define a struct representing your options
 GameOptions :: struct {
+	verbose:  bool `usage:"Debug level in logger"`,
 	highdpi:  bool `usage:"Enable HighDPI"`,
 	vsync:    bool `usage:"Vsync activation"`,
 	fpslimit: i32 `usage:"Limit of FPS"`,
 }
 
 main :: proc() {
-
-	// https://odin-lang.org/docs/overview/#tracking-allocator
-	when ODIN_DEBUG {
-		track: mem.Tracking_Allocator
-		mem.tracking_allocator_init(&track, context.allocator)
-		context.allocator = mem.tracking_allocator(&track)
-
-		defer {
-			if len(track.allocation_map) > 0 {
-				fmt.eprintf("=== %v allocations not freed: ===\n", len(track.allocation_map))
-				for _, entry in track.allocation_map {
-					fmt.eprintf("- %v bytes @ %v\n", entry.size, entry.location)
-				}
-			}
-			mem.tracking_allocator_destroy(&track)
-		}
-	}
-
-	// Free all remaining objects in the temp_allocator of the current context
-	defer free_all(context.temp_allocator)
+	context.logger = log.create_console_logger(.Info)
+	defer log.destroy_console_logger(context.logger)
+	engine.init_logging(context.logger)
 
 	// Parse the flags
 	opt: GameOptions
@@ -55,6 +40,29 @@ main :: proc() {
 	configFlags: rl.ConfigFlags
 	if opt.vsync do configFlags += {rl.ConfigFlag.VSYNC_HINT}
 	if opt.highdpi do configFlags += {rl.ConfigFlag.WINDOW_HIGHDPI}
+	if opt.verbose do context.logger.lowest_level = .Debug
+
+	// https://odin-lang.org/docs/overview/#tracking-allocator
+	when ODIN_DEBUG {
+		track: mem.Tracking_Allocator
+		mem.tracking_allocator_init(&track, context.allocator)
+		context.allocator = mem.tracking_allocator(&track)
+
+		defer {
+			if len(track.allocation_map) > 0 {
+				log.warnf("=== %v allocations not freed: ===\n", len(track.allocation_map))
+				for _, entry in track.allocation_map {
+					log.warnf("- %v bytes @ %v\n", entry.size, entry.location)
+				}
+			}
+			mem.tracking_allocator_destroy(&track)
+		}
+	}
+	// Free all remaining objects in the temp_allocator of the current context
+	defer free_all(context.temp_allocator)
+
+	// All raylib logs belong now to Odin
+	rl.SetTraceLogCallback(engine.rl_log)
 
 	// .WINDOW_RESIZABLE to check - (needs to check for dynamic render target resizing)
 	rl.SetConfigFlags(configFlags)
@@ -63,13 +71,13 @@ main :: proc() {
 
 	assets, loadAssetsErr := engine.loadAssets()
 	if loadAssetsErr != nil {
-		fmt.eprintln("No assets found - no forward")
+		log.fatal("No assets found - no forward")
 		return
 	}
 
 	levels, loadLevelsErr := game.loadLevels()
 	if loadLevelsErr != nil {
-		fmt.eprintln("No levels found - no forward")
+		log.fatal("No assets found - no forward")
 		return
 	}
 	defer game.deleteLevels(&levels)
@@ -84,11 +92,15 @@ main :: proc() {
 	// Do not forget to free all object from the game context
 	defer engine.deleteGameContext(&ctx)
 
+	when ODIN_DEBUG {
+		assert(len(levels) >= 1)
+	}
+
 	// Take the first level
 	level1 := levels[0]
 
 	for entity, idx in level1.entities {
-		fmt.printfln(">[LEVEL1] [%d] loading asset with id '%s'", idx, entity.id)
+		log.infof("[LEVEL1] [%d] loading asset with id '%s'", idx, entity.id)
 
 		textureFile: Maybe(string) = nil
 		for asset in assets {
@@ -97,7 +109,7 @@ main :: proc() {
 			}
 		}
 		if textureFile == nil {
-			fmt.eprintfln(">> [ERROR] texture with id '%s' not found", entity.textureId)
+			log.errorf("texture with id '%s' not found", entity.textureId)
 			continue
 		}
 
