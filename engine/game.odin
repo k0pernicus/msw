@@ -17,6 +17,18 @@ getInputs :: proc(ctx: ^GameContext) {
 
 cameraMovement :: proc(ctx: ^GameContext) {
 	STEP :: 5
+
+	if rl.IsKeyDown(.LEFT_SHIFT) {
+		if rl.IsKeyDown(.UP) {
+			if ctx.world.camera.object.zoom >= 5.0 {return}
+			ctx.world.camera.object.zoom += 0.01
+		} else if rl.IsKeyDown(.DOWN) {
+			if ctx.world.camera.object.zoom <= 0.2 {return}
+			ctx.world.camera.object.zoom -= 0.01
+		}
+		return
+	}
+
 	if rl.IsKeyDown(.LEFT) {
 		ctx.world.camera.object.offset.x -= STEP
 	} else if rl.IsKeyDown(.RIGHT) {
@@ -117,9 +129,10 @@ render_ui :: proc(self: ^GameContext) {
 		rl.DrawText(msw_pos_str, defaultX, 35, fontSize, rl.YELLOW)
 		// Display actual camera coordinates for debugging
 		cam_pos_str := fmt.ctprintf(
-			"Cam Target: %.2f, %.2f",
+			"Cam Target: %.2f, %.2f (zoom %.2f)",
 			self.world.camera.object.offset.x,
 			self.world.camera.object.offset.y,
+			self.world.camera.object.zoom,
 		)
 		rl.DrawText(cam_pos_str, defaultX, 55, fontSize, rl.YELLOW)
 		// Display cursor position
