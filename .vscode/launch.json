@@ -11,6 +11,7 @@
                 "--",
                 "--highdpi",
                 "--vsync",
+                "--verbose",
             ],
             "cwd": "${workspaceFolder}",
         }
