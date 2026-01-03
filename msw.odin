@@ -4,6 +4,7 @@ import "core:flags"
 import "core:log"
 import "core:os"
 import "core:strings"
+import "editor"
 import "engine"
 import "game"
 import rl "vendor:raylib"
@@ -88,6 +89,7 @@ main :: proc() {
 	ctx.assets.levels = levels
 	engine.initWorld(&ctx.world, ctx.assets, WIDTH, HEIGHT)
 	ctx.quit = false
+	ctx.editorContext = editor.initEditorContext()
 
 	// Do not forget to free all object from the game context
 	defer engine.deleteGameContext(&ctx)
@@ -129,13 +131,13 @@ main :: proc() {
 	if opt.fpslimit > 0 do rl.SetTargetFPS(opt.fpslimit)
 
 	for !rl.WindowShouldClose() && !ctx.quit {
-		engine.update_game(&ctx)
+		engine.updateGame(&ctx)
 
 		rl.BeginDrawing()
 		rl.ClearBackground(BACKGROUND_COLOR)
 
-		engine.render_game(&ctx)
-		engine.render_ui(&ctx)
+		engine.renderGame(&ctx)
+		engine.renderUI(&ctx)
 
 		rl.EndDrawing()
 

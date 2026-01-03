@@ -1,7 +1,6 @@
 package engine
 
 import "core:log"
-import rl "vendor:raylib"
 
 // Stored all objects related to a World
 World :: struct {
@@ -24,7 +23,7 @@ initWorld :: proc(self: ^World, assetCtx: ^AssetContext, screenWidth, screenHeig
 	self.camera = initCamera2D({0, 0}, {0, 0})
 	self.size = [2]i32{screenWidth, screenHeight}
 	self.cursor = Cursor {
-		position = rl.GetMousePosition(),
+		position = getMouseWorldPosition(&self.camera),
 	}
 }
 

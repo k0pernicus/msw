@@ -23,51 +23,52 @@ initCamera3D :: proc(position: [3]f32, target: [3]f32) -> Camera3D {
 }
 
 // TODO : replace with better code
-drawDynamicGrid :: proc(camera: ^Camera2D) {
-	// 1. Get screen dimensions
-	screen_w := f32(rl.GetScreenWidth())
-	screen_h := f32(rl.GetScreenHeight())
+drawDynamicGrid :: proc(camera: ^Camera2D, gridSize: f32) {
+	// Get screen dimensions
+	screenW := f32(rl.GetScreenWidth())
+	screenH := f32(rl.GetScreenHeight())
 
-	// 2. Determine world boundaries visible to the camera
+	// Determine world boundaries visible to the camera
 	// We convert (0,0) and (screen_w, screen_h) from screen space to world space
-	top_left := rl.GetScreenToWorld2D({0, 0}, camera.object)
-	bottom_right := rl.GetScreenToWorld2D({screen_w, screen_h}, camera.object)
+	topLeft := rl.GetScreenToWorld2D({0, 0}, camera.object)
+	bottomRight := rl.GetScreenToWorld2D({screenW, screenH}, camera.object)
 
-	grid_size: f32 = 100.0
 	zoom := camera.object.zoom
 
-	// 3. Calculate the starting and ending indices for the lines
+	// Calculate the starting and ending indices for the lines
 	// math.floor(top_left.x / grid_size) tells us which grid column is just off-screen to the left
-	start_x := f32(math.floor(top_left.x / grid_size)) * grid_size
-	end_x := f32(math.ceil(bottom_right.x / grid_size)) * grid_size
+	startX := f32(math.floor(topLeft.x / gridSize)) * gridSize
+	endX := f32(math.ceil(bottomRight.x / gridSize)) * gridSize
 
-	start_y := f32(math.floor(top_left.y / grid_size)) * grid_size
-	end_y := f32(math.ceil(bottom_right.y / grid_size)) * grid_size
+	startY := f32(math.floor(topLeft.y / gridSize)) * gridSize
+	endY := f32(math.ceil(bottomRight.y / gridSize)) * gridSize
 
-	grid_color := rl.Color{200, 200, 200, 40}
-	text_color := rl.Color{255, 255, 255, 80}
-	font_size := i32(12.0 / zoom)
+	gridColor := rl.Color{200, 200, 200, 40}
+	textColor := rl.Color{255, 255, 255, 80}
+	fontSize := i32(12.0 / zoom)
 
-	// 4. Draw Vertical Lines & X-axis labels
-	for x := start_x; x <= end_x; x += grid_size {
-		rl.DrawLineEx({x, start_y}, {x, end_y}, 1.0 / zoom, grid_color)
+	// Draw Vertical Lines & X-axis labels
+	for x := startX; x <= endX; x += gridSize {
+		rl.DrawLineEx({x, startY}, {x, endY}, 1.0 / zoom, gridColor)
 
 		// Only draw text if zoom is high enough to read it
 		if zoom > 0.2 {
 			// Label along the top edge of the view
 			label := fmt.ctprintf("%.0f", x)
-			rl.DrawText(label, i32(x + 5), i32(top_left.y + 5), font_size, text_color)
+			rl.DrawText(label, i32(x + 5), i32(topLeft.y + 5), fontSize, textColor)
+			rl.DrawText(label, i32(x + 5), i32(bottomRight.y - 20), fontSize, textColor)
 		}
 	}
 
-	// 5. Draw Horizontal Lines & Y-axis labels
-	for y := start_y; y <= end_y; y += grid_size {
-		rl.DrawLineEx({start_x, y}, {end_x, y}, 1.0 / zoom, grid_color)
+	// Draw Horizontal Lines & Y-axis labels
+	for y := startY; y <= endY; y += gridSize {
+		rl.DrawLineEx({startX, y}, {endX, y}, 1.0 / zoom, gridColor)
 
 		if zoom > 0.2 {
 			// Label along the left edge of the view
 			label := fmt.ctprintf("%.0f", y)
-			rl.DrawText(label, i32(top_left.x + 5), i32(y + 5), font_size, text_color)
+			rl.DrawText(label, i32(topLeft.x + 5), i32(y + 5), fontSize, textColor)
+			rl.DrawText(label, i32(bottomRight.x - 25), i32(y + 5), fontSize, textColor)
 		}
 	}
 }
