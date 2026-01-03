@@ -5,44 +5,39 @@ MAX_GRID_SIZE :: 500.0
 GRID_SIZE_STEP :: 2.0
 DEFAULT_GRID_SIZE :: 64.0
 
-CameraContext :: struct {
-	enabled: bool,
-}
-
 EntitiesContext :: struct {
 	enabled: bool,
 }
 
+GridContext :: struct {
+	enabled: bool,
+	size:    f32,
+}
+
 DebugMode :: struct {
-	camera:   CameraContext,
+	grid:     GridContext,
 	entities: EntitiesContext,
 	enabled:  bool,
 }
 
-GridContext :: struct {
-	size: f32,
-}
-
 EditorContext :: struct {
-	debugMode:   DebugMode,
-	gridContext: GridContext,
+	debugMode: DebugMode,
 }
 
 initEditorContext :: proc() -> EditorContext {
 	return EditorContext {
 		debugMode = DebugMode {
-			camera = CameraContext{enabled = false},
+			grid = GridContext{enabled = false, size = DEFAULT_GRID_SIZE},
 			entities = EntitiesContext{enabled = false},
 			enabled = false,
 		},
-		gridContext = GridContext{size = DEFAULT_GRID_SIZE},
 	}
 }
 
 deleteEditorContext :: proc(_: ^EditorContext) {}
 
-cameraMode :: proc(self: ^EditorContext) -> bool {
-	return self.debugMode.camera.enabled
+gridMode :: proc(self: ^EditorContext) -> bool {
+	return self.debugMode.grid.enabled
 }
 
 entitiesMode :: proc(self: ^EditorContext) -> bool {
@@ -53,8 +48,8 @@ informationsMode :: proc(self: ^EditorContext) -> bool {
 	return self.debugMode.enabled
 }
 
-toggleCameraDebugMode :: proc(self: ^EditorContext) {
-	self.debugMode.camera.enabled = !self.debugMode.camera.enabled
+toggleGridDebugMode :: proc(self: ^EditorContext) {
+	self.debugMode.grid.enabled = !self.debugMode.grid.enabled
 }
 
 toggleEntitiesDebugMode :: proc(self: ^EditorContext) {

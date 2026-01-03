@@ -29,10 +29,6 @@ GameOptions :: struct {
 }
 
 main :: proc() {
-	context.logger = log.create_console_logger(.Info)
-	defer log.destroy_console_logger(context.logger)
-	engine.init_logging(context.logger)
-
 	// Parse the flags
 	opt: GameOptions
 	style := flags.Parsing_Style.Unix
@@ -42,6 +38,10 @@ main :: proc() {
 	if opt.vsync do configFlags += {rl.ConfigFlag.VSYNC_HINT}
 	if opt.highdpi do configFlags += {rl.ConfigFlag.WINDOW_HIGHDPI}
 	if opt.verbose do context.logger.lowest_level = .Debug
+
+	context.logger = log.create_console_logger(opt.verbose ? .Debug : .Info)
+	defer log.destroy_console_logger(context.logger)
+	engine.init_logging(context.logger)
 
 	// https://odin-lang.org/docs/overview/#tracking-allocator
 	when ODIN_DEBUG {
@@ -102,7 +102,7 @@ main :: proc() {
 	level1 := levels[0]
 
 	for entity, idx in level1.entities {
-		log.infof("[LEVEL1] [%d] loading asset with id '%s'", idx, entity.id)
+		log.infof("[LEVEL %s] [%d] loading asset with id '%s'", level1.name, idx, entity.id)
 
 		textureFile: Maybe(string) = nil
 		for asset in assets {
@@ -128,7 +128,10 @@ main :: proc() {
 		)
 	}
 
-	if opt.fpslimit > 0 do rl.SetTargetFPS(opt.fpslimit)
+	if opt.fpslimit > 0 {
+		log.infof("setting limit of %d FPS", opt.fpslimit)
+		rl.SetTargetFPS(opt.fpslimit)
+	}
 
 	for !rl.WindowShouldClose() && !ctx.quit {
 		engine.updateGame(&ctx)

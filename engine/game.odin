@@ -15,7 +15,7 @@ getInputs :: proc(ctx: ^GameContext) {
 		// Debug menu
 		if rl.IsKeyPressed(DEBUG_MENU_KEY) do editor.toggleInformationsDebugMode(&ctx.editorContext)
 		// Debug camera
-		if rl.IsKeyPressed(CAMERA_DEBUG_KEY) do editor.toggleCameraDebugMode(&ctx.editorContext)
+		if rl.IsKeyPressed(GRID_DEBUG_KEY) do editor.toggleGridDebugMode(&ctx.editorContext)
 		// Debug entities
 		if rl.IsKeyPressed(ENTITIES_DEBUG_KEY) do editor.toggleEntitiesDebugMode(&ctx.editorContext)
 	}
@@ -33,10 +33,10 @@ cameraMovement :: proc(ctx: ^GameContext) {
 			ctx.world.camera.object.zoom -= 0.01
 		}
 		if wheelMove := rl.GetMouseWheelMove();
-		   wheelMove != 0 && editor.cameraMode(&ctx.editorContext) {
+		   wheelMove != 0 && editor.gridMode(&ctx.editorContext) {
 			// Based on that information, move down or up the grid size
-			if wheelMove > 0 do ctx.editorContext.gridContext.size = math.min(editor.MAX_GRID_SIZE, ctx.editorContext.gridContext.size + editor.GRID_SIZE_STEP)
-			else do ctx.editorContext.gridContext.size = math.max(editor.MIN_GRID_SIZE, ctx.editorContext.gridContext.size - editor.GRID_SIZE_STEP)
+			if wheelMove > 0 do ctx.editorContext.debugMode.grid.size = math.min(editor.MAX_GRID_SIZE, ctx.editorContext.debugMode.grid.size + editor.GRID_SIZE_STEP)
+			else do ctx.editorContext.debugMode.grid.size = math.max(editor.MIN_GRID_SIZE, ctx.editorContext.debugMode.grid.size - editor.GRID_SIZE_STEP)
 		}
 		return
 	}
@@ -80,6 +80,12 @@ deleteGameContext :: proc(self: ^GameContext) {
 submitDrawCommand :: proc(self: ^GameContext, cmd: DrawCommand) {
 	assert(cDrawCommandIdx < MAX_DRAW_COMMANDS)
 	self.drawCommands[cDrawCommandIdx] = cmd
+	switch c in cmd {
+	case DrawTextCommand:
+		log.debugf("submitting draw text command: %v", c)
+	case DrawCursorCommand:
+		log.debugf("submitting draw cursor command: %v", c)
+	}
 	cDrawCommandIdx += 1
 }
 
@@ -88,6 +94,7 @@ updateGame :: proc(self: ^GameContext) {
 	getInputs(self)
 	cameraMovement(self)
 	self.world.cursor.position = getMouseWorldPosition(&self.world.camera)
+	// This boolean is used to change the cursor (TODO : check if )
 	pointingToEntity: bool = false
 	for &entity in self.world.entities {
 		if rl.CheckCollisionPointRec(
@@ -104,8 +111,7 @@ updateGame :: proc(self: ^GameContext) {
 				rl.IsMouseButtonDown(rl.MouseButton.LEFT) ? fmt.ctprintf("%s", entity.onClick()) : fmt.ctprintf("%s", entity.onHover())
 			submitDrawCommand(
 				self,
-				DrawCommand {
-					type     = .Text,
+				DrawTextCommand {
 					position = {i32(entity.position.x) + 20, i32(entity.position.y) - 20},
 					size     = {0, 15}, // font size of 15 pixels
 					color    = rl.RED,
@@ -115,22 +121,33 @@ updateGame :: proc(self: ^GameContext) {
 			)
 		}
 	}
-	if pointingToEntity do changeCursorStyle(&self.world.cursor, CursorStyle.Pointing)
-	else do changeCursorStyle(&self.world.cursor, CursorStyle.Default)
+	// Submit change of cursor
+	cursorStyle := pointingToEntity ? CursorStyle.Pointing : CursorStyle.Default
+	submitDrawCommand(self, DrawCursorCommand{cursorStyle})
 }
 
-drawCommand :: proc(cmd: ^DrawCommand) {
-	switch cmd.type {
-	case .Text:
-		assert(cmd.text != nil)
-		rl.DrawText(cmd.text.(cstring), cmd.position.x, cmd.position.y, cmd.size.y, cmd.color)
+drawCommand :: proc(self: ^GameContext, cmd: ^DrawCommand) {
+	switch c in cmd {
+	case DrawCursorCommand:
+		changeCursorStyle(&self.world.cursor, c.newStyle)
+	case DrawTextCommand:
+		assert(c.text != nil)
+		rl.DrawText(c.text.(cstring), c.position.x, c.position.y, c.size.y, c.color)
 	case:
-		log.fatalf("unknown command with type %v", cmd.type)
+		log.fatalf("unknown command with type %v", c)
 	}
 }
 
 // Render all entities of the game
 renderGame :: proc(self: ^GameContext) {
+	for cmdIdx in 0 ..< cDrawCommandIdx {
+		cmd := self.drawCommands[cmdIdx].(DrawCommand)
+		#partial switch c in cmd {
+		case DrawCursorCommand:
+			drawCommand(self, &cmd)
+		}
+	}
+
 	beginCamera(&self.world.camera)
 	for &entity in self.world.entities {
 		rTexture := getTexture(self.assets, entity.textureId)
@@ -145,16 +162,22 @@ renderGame :: proc(self: ^GameContext) {
 	// As we are in the camera, we only draw in the World space
 	for cmdIdx in 0 ..< cDrawCommandIdx {
 		cmd := self.drawCommands[cmdIdx].(DrawCommand)
-		if cmd.space != .World do continue
-		drawCommand(&cmd)
+		#partial switch c in cmd {
+		case DrawTextCommand:
+			if c.space != .World do continue
+			drawCommand(self, &cmd)
+		}
 	}
 	endCamera(&self.world.camera)
 
 	// Now, draw in other spaces
 	for cmdIdx in 0 ..< cDrawCommandIdx {
 		cmd := self.drawCommands[cmdIdx].(DrawCommand)
-		if cmd.space == .World do continue
-		drawCommand(&cmd)
+		#partial switch c in cmd {
+		case DrawTextCommand:
+			if c.space == .World do continue
+			drawCommand(self, &cmd)
+		}
 	}
 
 	// Don't forget to clean the drawCommand dynamic array at the end
@@ -169,8 +192,8 @@ renderGame :: proc(self: ^GameContext) {
 renderUI :: proc(self: ^GameContext) {
 	beginCamera(&self.world.camera)
 
-	if editor.cameraMode(&self.editorContext) {
-		drawDynamicGrid(&self.world.camera, self.editorContext.gridContext.size)
+	if editor.gridMode(&self.editorContext) {
+		drawDynamicGrid(&self.world.camera, self.editorContext.debugMode.grid.size)
 	}
 
 	if editor.entitiesMode(&self.editorContext) {
@@ -202,19 +225,25 @@ renderUI :: proc(self: ^GameContext) {
 		// Define a panel area for our debug info
 		debugPanelRect := rl.Rectangle{0, 0, 300, f32(rl.GetScreenHeight())}
 
-		currY: f32 = 46
+		currYTop: f32 = 46
+		currYBottom: f32 = f32(rl.GetScreenHeight()) - currYTop
 
-		getDebugRect :: proc(currY: ^f32, spacing: f32 = 24) -> rl.Rectangle {
+		getDebugRectFromTop :: proc(currY: ^f32, spacing: f32 = 24) -> rl.Rectangle {
 			r: rl.Rectangle = {10, currY^, 280, 20}
 			currY^ += spacing
+			return r
+		}
+		getDebugRectFromBottom :: proc(currY: ^f32, spacing: f32 = 24) -> rl.Rectangle {
+			r: rl.Rectangle = {10, currY^, 280, 20}
+			currY^ -= spacing
 			return r
 		}
 
 		rl.GuiWindowBox(debugPanelRect, "ENGINE DEBUGGER")
 
-		rl.GuiLabel(getDebugRect(&currY), fmt.ctprintf("FPS: %d", rl.GetFPS()))
+		rl.GuiLabel(getDebugRectFromTop(&currYTop), fmt.ctprintf("FPS: %d", rl.GetFPS()))
 
-		rl.GuiLabel(getDebugRect(&currY), fmt.ctprint("Project: msw project"))
+		rl.GuiLabel(getDebugRectFromTop(&currYTop), fmt.ctprint("Project: msw project"))
 
 		cam_str := fmt.ctprintf(
 			"Cam target: %.1f, %.1f (z: %.2f)",
@@ -222,21 +251,21 @@ renderUI :: proc(self: ^GameContext) {
 			self.world.camera.object.target.y,
 			self.world.camera.object.zoom,
 		)
-		rl.GuiLabel(getDebugRect(&currY), cam_str)
+		rl.GuiLabel(getDebugRectFromTop(&currYTop), cam_str)
 
-		sliderRect := getDebugRect(&currY)
-		currentSize := fmt.ctprintf("%.1f", self.editorContext.gridContext.size)
+		sliderRect := getDebugRectFromTop(&currYTop)
+		currentSize := fmt.ctprintf("%.1f", self.editorContext.debugMode.grid.size)
 		rl.GuiSlider(
 			{sliderRect.x + 50, sliderRect.y, sliderRect.width - 70, sliderRect.height},
 			"Grid size",
 			currentSize,
-			&self.editorContext.gridContext.size,
+			&self.editorContext.debugMode.grid.size,
 			editor.MIN_GRID_SIZE,
 			editor.MAX_GRID_SIZE,
 		)
 
 		// Example Toggle button to show how RayGui handles input
-		if rl.GuiButton(getDebugRect(&currY), "RESET CAMERA") {
+		if rl.GuiButton(getDebugRectFromBottom(&currYBottom), "RESET CAMERA") {
 			self.world.camera.object.target = {0, 0}
 			self.world.camera.object.zoom = 1.0
 		}
