@@ -30,15 +30,15 @@ cameraMovement :: proc(ctx: ^GameContext) {
 	}
 
 	if rl.IsKeyDown(.LEFT) {
-		ctx.world.camera.object.offset.x -= STEP
+		ctx.world.camera.object.target.x -= STEP
 	} else if rl.IsKeyDown(.RIGHT) {
-		ctx.world.camera.object.offset.x += STEP
+		ctx.world.camera.object.target.x += STEP
 	}
 
 	if rl.IsKeyDown(.UP) {
-		ctx.world.camera.object.offset.y -= STEP
+		ctx.world.camera.object.target.y -= STEP
 	} else if rl.IsKeyDown(.DOWN) {
-		ctx.world.camera.object.offset.y += STEP
+		ctx.world.camera.object.target.y += STEP
 	}
 
 }
@@ -118,32 +118,8 @@ render_game :: proc(self: ^GameContext) {
 	endCamera(&self.world.camera)
 }
 
-// Render the UI (mainly for debug)
 render_ui :: proc(self: ^GameContext) {
 	beginCamera(&self.world.camera)
-	fontSize: i32 = 18
-	defaultX: i32 = 10
-	if self.debugMode.informations {
-		rl.DrawFPS(defaultX, 10)
-		msw_pos_str := fmt.ctprint("msw project")
-		rl.DrawText(msw_pos_str, defaultX, 35, fontSize, rl.YELLOW)
-		// Display actual camera coordinates for debugging
-		cam_pos_str := fmt.ctprintf(
-			"Cam Target: %.2f, %.2f (zoom %.2f)",
-			self.world.camera.object.offset.x,
-			self.world.camera.object.offset.y,
-			self.world.camera.object.zoom,
-		)
-		rl.DrawText(cam_pos_str, defaultX, 55, fontSize, rl.YELLOW)
-		// Display cursor position
-		cursor_pos_str := fmt.ctprintf(
-			"Cursor: %.2f, %.2f",
-			self.world.cursor.position.x,
-			self.world.cursor.position.y,
-		)
-		rl.DrawText(cursor_pos_str, defaultX, 75, fontSize, rl.YELLOW)
-	}
-
 
 	if self.debugMode.camera {
 		drawDynamicGrid(&self.world.camera)
@@ -154,24 +130,62 @@ render_ui :: proc(self: ^GameContext) {
 			rTexture := getTexture(self.assets, entity.textureId)
 			if rTexture == nil do continue
 			texture := rTexture.(rl.Texture)
+
+			// Draw Entity ID and Box in world space
 			rl.DrawText(
 				fmt.ctprintf("%s", entity.id),
-				i32(entity.position.x) - 10.0,
-				i32(entity.position.y) - 18.0,
+				i32(entity.position.x),
+				i32(entity.position.y - 15),
 				10,
 				rl.BLACK,
 			)
 			rl.DrawRectangleLinesEx(
-				rl.Rectangle {
-					x = entity.position.x - 5.0,
-					y = entity.position.y - 5.0,
-					width = f32(texture.width) + 5.0,
-					height = f32(texture.height) + 5.0,
-				},
-				2.0,
+				{entity.position.x, entity.position.y, f32(texture.width), f32(texture.height)},
+				1.0 / self.world.camera.object.zoom, // Keep lines thin regardless of zoom
 				rl.BLACK,
 			)
 		}
 	}
+
 	endCamera(&self.world.camera)
+
+	if self.debugMode.informations {
+		rl.DrawFPS(10, 10)
+
+		// Define a panel area for our debug info
+		debug_panel_rect := rl.Rectangle{10, 40, 300, 160}
+
+		// RayGui Window Box
+		rl.GuiWindowBox(debug_panel_rect, "ENGINE DEBUGGER")
+
+		// Draw info inside the panel using GuiLabel
+		curr_y: f32 = 70
+		spacing: f32 = 24
+
+		rl.GuiLabel({20, curr_y, 280, 20}, fmt.ctprint("Project: msw project"))
+		curr_y += spacing
+
+		cam_str := fmt.ctprintf(
+			"Cam target: %.1f, %.1f (z: %.2f)",
+			self.world.camera.object.target.x,
+			self.world.camera.object.target.y,
+			self.world.camera.object.zoom,
+		)
+		rl.GuiLabel({20, curr_y, 280, 20}, cam_str)
+		curr_y += spacing
+
+		cursor_str := fmt.ctprintf(
+			"Cursor World: %.1f, %.1f",
+			self.world.cursor.position.x,
+			self.world.cursor.position.y,
+		)
+		rl.GuiLabel({20, curr_y, 280, 20}, cursor_str)
+		curr_y += spacing
+
+		// Example Toggle button to show how RayGui handles input
+		if rl.GuiButton({20, curr_y, 120, 24}, "RESET CAMERA") {
+			self.world.camera.object.target = {0, 0}
+			self.world.camera.object.zoom = 1.0
+		}
+	}
 }
