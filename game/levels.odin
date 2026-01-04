@@ -9,6 +9,7 @@ ASSETS_FOLDER :: "assets/"
 LEVELS_DESCRIPTION :: "levels.json"
 
 Coordinate2D :: [2]f32
+Size2D :: [2]i32
 
 EntityDesc :: struct {
 	id:        string `json:"id"`,
@@ -37,9 +38,10 @@ deleteTiles :: proc(tiles: ^[]TileDesc) {
 }
 
 Level :: struct {
-	name:     string `json:"name"`,
-	entities: []EntityDesc `json:"entities"`,
-	tiles:    []TileDesc `json:"tiles"`,
+	name:       string `json:"name"`,
+	dimensions: Size2D `json:"dimensions"`,
+	entities:   []EntityDesc `json:"entities"`,
+	tiles:      []TileDesc `json:"tiles"`,
 }
 
 deleteLevels :: proc(levels: ^[]Level) {

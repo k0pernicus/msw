@@ -1,21 +1,25 @@
 [
     {
         "name": "level1",
+        "dimensions": [
+            1440,
+            720
+        ],
         "entities": [
             {
                 "id": "first cat",
                 "texture_id": "cat",
                 "position": [
                     448.00000000,
-                    460.00000000
+                    464.00000000
                 ]
             },
             {
                 "id": "second cat",
                 "texture_id": "cat",
                 "position": [
-                    468.00000000,
-                    320.00000000
+                    432.00000000,
+                    432.00000000
                 ]
             }
         ],

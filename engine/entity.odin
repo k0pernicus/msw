@@ -11,6 +11,7 @@ Entity :: struct {
 	id:        string,
 	textureId: string,
 	position:  Coordinate2D,
+	size:      Size2D,
 	active:    bool,
 	onClick:   OnClickAction,
 	onHover:   OnHoverAction,
@@ -19,16 +20,17 @@ Entity :: struct {
 newEntity :: proc(
 	id: string,
 	textureId: string,
-	position: Coordinate2D = [2]f32{},
+	position: Coordinate2D,
 	active: bool = false,
 	onClick: OnClickAction = noAction,
 	onHover: OnHoverAction = noAction,
 ) -> Entity {
-	return Entity{id, textureId, position, active, onClick, onHover}
+	return Entity{id, textureId, position, [2]i32{}, active, onClick, onHover}
 }
 
 deleteEntity :: proc(self: ^Entity) {
 	self.position = [2]f32{}
+	self.size = [2]i32{}
 	self.active = false
 	self.onClick = nil
 	self.onHover = nil
@@ -36,7 +38,11 @@ deleteEntity :: proc(self: ^Entity) {
 	delete(self.textureId)
 }
 
-setActivity :: proc(self: ^Entity, activity: bool) {
+setEntitySize :: proc(self: ^Entity, size: [2]i32) {
+	self.size = size
+}
+
+setEntityActivity :: proc(self: ^Entity, activity: bool) {
 	self.active = activity
 }
 

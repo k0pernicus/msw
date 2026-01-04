@@ -15,10 +15,8 @@ import "core:mem"
 _ :: fmt
 _ :: mem
 
-BACKGROUND_COLOR: rl.Color : rl.BLUE
-
-WIDTH: i32 : 1280
-HEIGHT: i32 : 720
+EDITOR_BACKGROUND_COLOR: rl.Color : rl.BLUE
+GAME_BACKGROUND_COLOR: rl.Color : {20, 20, 20, 255}
 
 // Define a struct representing your options
 GameOptions :: struct {
@@ -71,11 +69,25 @@ main :: proc() {
 
 	// .WINDOW_RESIZABLE to check - (needs to check for dynamic render target resizing)
 	rl.SetConfigFlags(configFlags)
-	rl.InitWindow(WIDTH, HEIGHT, "Odin + Raylib")
+
+	rl.InitWindow(0, 0, "Odin + Raylib")
 	defer rl.CloseWindow()
 
+	if nbMonitors := rl.GetMonitorCount(); nbMonitors == 0 {
+		log.fatal("no monitor found")
+	}
+
+	screenWidth: i32 = rl.GetMonitorWidth(0)
+	screenHeight: i32 = rl.GetMonitorHeight(0)
+	when ODIN_OS == .Darwin {
+		screenHeight -= 70 // Resize to handle the menu bar of macOS
+	}
+	rl.SetWindowSize(screenWidth, screenHeight)
+
+	log.debugf("set screen with dimension %dx%d", screenHeight, screenWidth)
+
 	// Load cyber default as editor theme
-	if enableEditor do rl.GuiLoadStyle(editor.EditorStyles[.CYBER])
+	if enableEditor do rl.GuiLoadStyle(editor.EditorStyles[.DARK])
 
 	assets, loadAssetsErr := engine.loadAssets()
 	if loadAssetsErr != nil {
@@ -91,10 +103,11 @@ main :: proc() {
 	defer game.deleteLevels(&levels)
 
 	// Init the context of the game
+	// TODO : should be in the heap !!!!
 	ctx := engine.GameContext{}
 	ctx.assets = new(engine.AssetContext)
 	ctx.assets.levels = levels
-	engine.initWorld(&ctx.world, ctx.assets, WIDTH, HEIGHT)
+	engine.initWorld(&ctx.world, ctx.assets, u32(screenWidth), u32(screenHeight))
 	ctx.quit = false
 	ctx.editorContext = editor.initEditorContext()
 
@@ -106,10 +119,21 @@ main :: proc() {
 	}
 
 	// Take the first level
-	level1 := levels[0]
+	ctx.currentLevel = &ctx.assets.levels[0]
+	// Center the camera to target the center of the level
+	ctx.world.camera.object.offset = {f32(screenWidth) / 2, f32(screenHeight) / 2}
+	ctx.world.camera.object.target = {
+		f32(ctx.currentLevel.dimensions.x) / 2.0,
+		f32(ctx.currentLevel.dimensions.y) / 2.0,
+	}
 
-	for entity, idx in level1.entities {
-		log.infof("[LEVEL %s] [%d] loading asset with id '%s'", level1.name, idx, entity.id)
+	for entity, idx in ctx.currentLevel.entities {
+		log.infof(
+			"[LEVEL %s] [%d] loading asset with id '%s'",
+			ctx.currentLevel.name,
+			idx,
+			entity.id,
+		)
 
 		textureFile: Maybe(string) = nil
 		for asset in assets {
@@ -144,11 +168,12 @@ main :: proc() {
 		engine.updateGame(&ctx)
 
 		rl.BeginDrawing()
-		rl.ClearBackground(BACKGROUND_COLOR)
+		rl.ClearBackground(
+			ctx.editorContext.enabled ? EDITOR_BACKGROUND_COLOR : GAME_BACKGROUND_COLOR,
+		)
 
 		engine.renderGame(&ctx)
 		if enableEditor do engine.renderUI(&ctx)
-
 		rl.EndDrawing()
 
 		// Force to free all allocations in the current context
