@@ -45,7 +45,7 @@ drawDynamicGrid :: proc(camera: ^Camera2D, gridSize: f32) {
 
 	gridColor := rl.Color{200, 200, 200, 40}
 	textColor := rl.Color{255, 255, 255, 80}
-	fontSize := i32(12.0 / zoom)
+	fontSize := i32(8.0 / zoom)
 
 	// Draw Vertical Lines & X-axis labels
 	for x := startX; x <= endX; x += gridSize {

@@ -201,14 +201,10 @@ renderUI :: proc(self: ^GameContext) {
 			rTexture := getTexture(self.assets, entity.textureId)
 			if rTexture == nil do continue
 			texture := rTexture.(rl.Texture)
-
 			// Draw Entity ID and Box in world space
-			rl.DrawText(
+			rl.GuiLabel(
+				{entity.position.x, entity.position.y - 15, 120, 10},
 				fmt.ctprintf("%s", entity.id),
-				i32(entity.position.x),
-				i32(entity.position.y - 15),
-				10,
-				rl.BLACK,
 			)
 			rl.DrawRectangleLinesEx(
 				{entity.position.x, entity.position.y, f32(texture.width), f32(texture.height)},

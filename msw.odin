@@ -22,11 +22,14 @@ HEIGHT: i32 : 720
 
 // Define a struct representing your options
 GameOptions :: struct {
-	verbose:  bool `usage:"Debug level in logger"`,
-	highdpi:  bool `usage:"Enable HighDPI"`,
-	vsync:    bool `usage:"Vsync activation"`,
-	fpslimit: i32 `usage:"Limit of FPS"`,
+	enableeditor: bool `usage:"Enable the editor and debug function"`,
+	verbose:      bool `usage:"Debug level in logger"`,
+	highdpi:      bool `usage:"Enable HighDPI"`,
+	vsync:        bool `usage:"Vsync activation"`,
+	fpslimit:     i32 `usage:"Limit of FPS"`,
 }
+
+enableEditor: bool = false
 
 main :: proc() {
 	// Parse the flags
@@ -38,6 +41,7 @@ main :: proc() {
 	if opt.vsync do configFlags += {rl.ConfigFlag.VSYNC_HINT}
 	if opt.highdpi do configFlags += {rl.ConfigFlag.WINDOW_HIGHDPI}
 	if opt.verbose do context.logger.lowest_level = .Debug
+	if opt.enableeditor do enableEditor = true
 
 	context.logger = log.create_console_logger(opt.verbose ? .Debug : .Info)
 	defer log.destroy_console_logger(context.logger)
@@ -69,6 +73,9 @@ main :: proc() {
 	rl.SetConfigFlags(configFlags)
 	rl.InitWindow(WIDTH, HEIGHT, "Odin + Raylib")
 	defer rl.CloseWindow()
+
+	// Load cyber default as editor theme
+	if enableEditor do rl.GuiLoadStyle(editor.EditorStyles[.CYBER])
 
 	assets, loadAssetsErr := engine.loadAssets()
 	if loadAssetsErr != nil {
@@ -140,7 +147,7 @@ main :: proc() {
 		rl.ClearBackground(BACKGROUND_COLOR)
 
 		engine.renderGame(&ctx)
-		engine.renderUI(&ctx)
+		if enableEditor do engine.renderUI(&ctx)
 
 		rl.EndDrawing()
 

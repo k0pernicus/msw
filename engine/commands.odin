@@ -21,6 +21,8 @@ DrawCursorCommand :: struct {
 
 DrawCommand :: union {
 	DrawTextCommand,
+	// Maybe it does not make sense to keep the cursor command here
+	// It can be in a sort of "event queue" and handled there
 	DrawCursorCommand,
 }
 
