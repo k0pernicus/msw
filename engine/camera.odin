@@ -8,18 +8,10 @@ Camera2D :: struct {
 	object: rl.Camera2D,
 }
 
-Camera3D :: struct {
-	object: rl.Camera3D,
-}
-
 initCamera2D :: proc(position: [2]f32, target: [2]f32) -> Camera2D {
 	return Camera2D {
 		object = rl.Camera2D{offset = position, target = target, rotation = 0.0, zoom = 1.0},
 	}
-}
-
-initCamera3D :: proc(position: [3]f32, target: [3]f32) -> Camera3D {
-	return Camera3D{object = rl.Camera3D{position = position, target = target}}
 }
 
 // TODO : replace with better code
@@ -79,12 +71,6 @@ moveCamera2D :: proc(self: ^Camera2D, movement: Coordinate2D) {
 	self.object.target += movement
 }
 
-// Move the camera by `movement`
-// This function does not erase the current position by `movement`!
-moveCamera3D :: proc(self: ^Camera3D, movement: Coordinate3D) {
-	self.object.target += movement
-}
-
 beginCamera2D :: proc(self: ^Camera2D) {
 	rl.BeginMode2D(self.object)
 }
@@ -93,27 +79,16 @@ endCamera2D :: proc(self: ^Camera2D) {
 	rl.EndMode2D()
 }
 
-beginCamera3D :: proc(self: ^Camera3D) {
-	rl.BeginMode3D(self.object)
-}
-
-endCamera3D :: proc(self: ^Camera3D) {
-	rl.EndMode3D()
-}
-
 // Overload: This creates a single identifier that chooses the
 // correct function based on the type you pass in.
 moveCamera :: proc {
 	moveCamera2D,
-	moveCamera3D,
 }
 
 beginCamera :: proc {
 	beginCamera2D,
-	beginCamera3D,
 }
 
 endCamera :: proc {
 	endCamera2D,
-	endCamera3D,
 }
