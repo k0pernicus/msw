@@ -9,8 +9,10 @@
             "program": "${workspaceFolder}/build/msw-debug",
             "args": [
                 "--",
+                // "--vsync",
+                "--enableeditor",
+                "--fpslimit=60",
                 "--highdpi",
-                "--vsync",
                 "--verbose",
             ],
             "cwd": "${workspaceFolder}",
