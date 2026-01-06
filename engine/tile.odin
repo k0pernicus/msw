@@ -1,17 +1,17 @@
 package engine
 
 Tile :: struct {
-	id:        string,
-	textureId: string,
-	position:  Coordinate2D,
+	id:         string,
+	texture_id: string,
+	position:   Coordinate2D,
 }
 
-newTile :: proc(id: string, textureId: string, position: Coordinate2D = [2]f32{}) -> Tile {
-	return Tile{id, textureId, position}
+new_tile :: proc(id: string, texture_id: string, position: Coordinate2D = [2]f32{}) -> Tile {
+	return Tile{id, texture_id, position}
 }
 
-deleteTile :: proc(self: ^Tile) {
+delete_tile :: proc(self: ^Tile) {
 	delete(self.id)
-	delete(self.textureId)
+	delete(self.texture_id)
 	self.position = [2]f32{}
 }

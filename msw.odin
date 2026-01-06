@@ -27,7 +27,7 @@ GameOptions :: struct {
 	fpslimit:     i32 `usage:"Limit of FPS"`,
 }
 
-enableEditor: bool = false
+enable_editor: bool = false
 
 main :: proc() {
 	// Parse the flags
@@ -35,11 +35,11 @@ main :: proc() {
 	style := flags.Parsing_Style.Unix
 	if len(os.args) > 1 do flags.parse_or_exit(&opt, os.args[1:], style)
 
-	configFlags: rl.ConfigFlags
-	if opt.vsync do configFlags += {rl.ConfigFlag.VSYNC_HINT}
-	if opt.highdpi do configFlags += {rl.ConfigFlag.WINDOW_HIGHDPI}
+	config_flags: rl.ConfigFlags
+	if opt.vsync do config_flags += {rl.ConfigFlag.VSYNC_HINT}
+	if opt.highdpi do config_flags += {rl.ConfigFlag.WINDOW_HIGHDPI}
 	if opt.verbose do context.logger.lowest_level = .Debug
-	if opt.enableeditor do enableEditor = true
+	if opt.enableeditor do enable_editor = true
 
 	context.logger = log.create_console_logger(opt.verbose ? .Debug : .Info)
 	defer log.destroy_console_logger(context.logger)
@@ -68,93 +68,93 @@ main :: proc() {
 	rl.SetTraceLogCallback(engine.rl_log)
 
 	// .WINDOW_RESIZABLE to check - (needs to check for dynamic render target resizing)
-	rl.SetConfigFlags(configFlags)
+	rl.SetConfigFlags(config_flags)
 
 	rl.InitWindow(0, 0, "Odin + Raylib")
 	defer rl.CloseWindow()
 
-	if nbMonitors := rl.GetMonitorCount(); nbMonitors == 0 {
+	if nb_monitors := rl.GetMonitorCount(); nb_monitors == 0 {
 		log.fatal("no monitor found")
 	}
 
-	screenWidth: i32 = rl.GetMonitorWidth(0)
-	screenHeight: i32 = rl.GetMonitorHeight(0)
+	screen_width: i32 = rl.GetMonitorWidth(0)
+	screen_height: i32 = rl.GetMonitorHeight(0)
 	when ODIN_OS == .Darwin {
-		screenHeight -= 70 // Resize to handle the menu bar of macOS
+		screen_height -= 70 // Resize to handle the menu bar of macOS
 	}
-	rl.SetWindowSize(screenWidth, screenHeight)
+	rl.SetWindowSize(screen_width, screen_height)
 
-	log.debugf("set screen with dimension %dx%d", screenHeight, screenWidth)
+	log.debugf("set screen with dimension %dx%d", screen_height, screen_width)
 
 	// Load cyber default as editor theme
-	if enableEditor do rl.GuiLoadStyle(editor.EditorStyles[.DARK])
+	if enable_editor do rl.GuiLoadStyle(editor.EditorStyles[.DARK])
 
-	assets, loadAssetsErr := engine.loadAssets()
-	if loadAssetsErr != nil {
+	assets, load_assets_err := engine.load_assets()
+	if load_assets_err != nil {
 		log.fatal("No assets found - no forward")
 		return
 	}
 
-	levels, loadLevelsErr := game.loadLevels()
-	if loadLevelsErr != nil {
+	levels, load_levels_err := game.load_levels()
+	if load_levels_err != nil {
 		log.fatal("No assets found - no forward")
 		return
 	}
-	defer game.deleteLevels(&levels)
+	defer game.delete_levels(&levels)
 
 	// Init the context of the game
 	// TODO : should be in the heap !!!!
 	ctx := engine.GameContext{}
 	ctx.assets = new(engine.AssetContext)
 	ctx.assets.levels = levels
-	engine.initWorld(&ctx.world, ctx.assets, u32(screenWidth), u32(screenHeight))
+	engine.init_world(&ctx.world, ctx.assets, u32(screen_width), u32(screen_height))
 	ctx.quit = false
-	ctx.editorContext = editor.initEditorContext()
+	ctx.editor_context = editor.initEditorContext()
 
 	// Do not forget to free all object from the game context
-	defer engine.deleteGameContext(&ctx)
+	defer engine.delete_game_context(&ctx)
 
 	when ODIN_DEBUG {
 		assert(len(levels) >= 1)
 	}
 
 	// Take the first level
-	ctx.currentLevel = &ctx.assets.levels[0]
+	ctx.current_level = &ctx.assets.levels[0]
 	// Center the camera to target the center of the level
-	ctx.world.camera.object.offset = {f32(screenWidth) / 2, f32(screenHeight) / 2}
+	ctx.world.camera.object.offset = {f32(screen_width) / 2, f32(screen_height) / 2}
 	ctx.world.camera.object.target = {
-		f32(ctx.currentLevel.dimensions.x) / 2.0,
-		f32(ctx.currentLevel.dimensions.y) / 2.0,
+		f32(ctx.current_level.dimensions.x) / 2.0,
+		f32(ctx.current_level.dimensions.y) / 2.0,
 	}
 
-	for entity, idx in ctx.currentLevel.entities {
+	for entity, idx in ctx.current_level.entities {
 		log.infof(
 			"[LEVEL %s] [%d] loading asset with id '%s'",
-			ctx.currentLevel.name,
+			ctx.current_level.name,
 			idx,
 			entity.id,
 		)
 
-		textureFile: Maybe(string) = nil
+		texture_file: Maybe(string) = nil
 		for asset in assets {
-			if asset.id == entity.textureId {
-				textureFile = asset.textureFile
+			if asset.id == entity.texture_id {
+				texture_file = asset.texture_file
 			}
 		}
-		if textureFile == nil {
-			log.errorf("texture with id '%s' not found", entity.textureId)
+		if texture_file == nil {
+			log.errorf("texture with id '%s' not found", entity.texture_id)
 			continue
 		}
 
-		engine.addEntity(
+		engine.add_entity(
 			&ctx.world,
 			// Copy the strings as everything is stored in temp_allocator
-			engine.newEntity(
+			engine.on_click(
 				strings.clone(entity.id),
-				strings.clone(textureFile.(string)),
+				strings.clone(texture_file.(string)),
 				entity.position,
-				onClick = engine.actionSayMiaouh,
-				onHover = engine.actionSayGrrh,
+				on_click = engine.action_say_miaouh,
+				on_hover = engine.action_say_grrh,
 			),
 		)
 	}
@@ -165,15 +165,15 @@ main :: proc() {
 	}
 
 	for !rl.WindowShouldClose() && !ctx.quit {
-		engine.updateGame(&ctx)
+		engine.update_game(&ctx)
 
 		rl.BeginDrawing()
 		rl.ClearBackground(
-			ctx.editorContext.enabled ? EDITOR_BACKGROUND_COLOR : GAME_BACKGROUND_COLOR,
+			ctx.editor_context.enabled ? EDITOR_BACKGROUND_COLOR : GAME_BACKGROUND_COLOR,
 		)
 
-		engine.renderGame(&ctx)
-		if enableEditor do engine.renderUI(&ctx)
+		engine.render_game(&ctx)
+		if enable_editor do engine.render_editor(&ctx)
 		rl.EndDrawing()
 
 		// Force to free all allocations in the current context

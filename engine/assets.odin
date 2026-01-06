@@ -16,16 +16,16 @@ AssetContext :: struct {
 	levels:   []game.Level,
 }
 
-initAssets :: proc(assetCtx: ^AssetContext) {
-	if assetCtx == nil {
+init_assets :: proc(asset_ctx: ^AssetContext) {
+	if asset_ctx == nil {
 		return
 	}
-	assetCtx^ = AssetContext{}
+	asset_ctx^ = AssetContext{}
 }
 
 AssetDescription :: struct {
-	id:          string `json:"id"`,
-	textureFile: string `json:"texture_file"`,
+	id:           string `json:"id"`,
+	texture_file: string `json:"texture_file"`,
 }
 
 AssetError :: enum {
@@ -36,28 +36,28 @@ AssetError :: enum {
 	TextureLoadErr,
 }
 
-loadAssets :: proc() -> ([]AssetDescription, AssetError) {
-	assetsDescPath := strings.concatenate([]string{ASSETS_FOLDER, ASSETS_DESCRIPTION})
-	defer delete(assetsDescPath)
-	if !os.exists(assetsDescPath) do return nil, .OpenFileErr
-	fd, openErr := os.open(assetsDescPath, os.O_RDONLY)
-	if openErr != nil {
-		log.errorf("error opening assets description file: %s", openErr)
+load_assets :: proc() -> ([]AssetDescription, AssetError) {
+	assets_desc_path := strings.concatenate([]string{ASSETS_FOLDER, ASSETS_DESCRIPTION})
+	defer delete(assets_desc_path)
+	if !os.exists(assets_desc_path) do return nil, .OpenFileErr
+	fd, open_err := os.open(assets_desc_path, os.O_RDONLY)
+	if open_err != nil {
+		log.errorf("error opening assets description file: %s", open_err)
 		return nil, .OpenFileErr
 	}
-	fileSize, sizeErr := os.file_size(fd)
-	if sizeErr != nil {
-		log.errorf("error getting size of assets description file: %s", openErr)
+	file_size, size_err := os.file_size(fd)
+	if size_err != nil {
+		log.errorf("error getting size of assets description file: %s", open_err)
 		return nil, .GetFileSizeErr
 	}
-	fileContent: []u8 = make([]u8, fileSize)
-	defer delete(fileContent)
-	if readBytes, err := os.read(fd, fileContent); err != nil || readBytes == 0 {
+	file_content: []u8 = make([]u8, file_size)
+	defer delete(file_content)
+	if read_bytes, err := os.read(fd, file_content); err != nil || read_bytes == 0 {
 		log.errorf("error reading assets description file: %s", err)
 		return nil, .ReadFileErr
 	}
 	description: []AssetDescription
-	if err := json.unmarshal(fileContent, &description, allocator = context.temp_allocator);
+	if err := json.unmarshal(file_content, &description, allocator = context.temp_allocator);
 	   err != nil {
 		log.errorf("error unmarshalling assets description file: %s", err)
 		return nil, .UnmarshalErr
@@ -65,55 +65,55 @@ loadAssets :: proc() -> ([]AssetDescription, AssetError) {
 	return description, nil
 }
 
-loadTexture :: proc(self: ^AssetContext, assetName: string) -> (rl.Texture, AssetError) {
-	if texture, exists := self.textures[assetName]; exists do return texture, nil
+load_texture :: proc(self: ^AssetContext, asset_name: string) -> (rl.Texture, AssetError) {
+	if texture, exists := self.textures[asset_name]; exists do return texture, nil
 
-	assetPath := strings.concatenate([]string{ASSETS_FOLDER, assetName})
-	defer delete(assetPath)
-	texture := rl.LoadTexture(strings.clone_to_cstring(assetPath, context.temp_allocator))
+	asset_path := strings.concatenate([]string{ASSETS_FOLDER, asset_name})
+	defer delete(asset_path)
+	texture := rl.LoadTexture(strings.clone_to_cstring(asset_path, context.temp_allocator))
 
 	if texture.id == 0 do return rl.Texture{}, .TextureLoadErr // texture does not exists
-	self.textures[assetName] = texture
+	self.textures[asset_name] = texture
 
-	log.debugf("texture '%s' with id '%d' has been added", assetName, texture.id)
+	log.debugf("texture '%s' with id '%d' has been added", asset_name, texture.id)
 	return texture, nil
 }
 
-getTexture :: proc(self: ^AssetContext, textureId: string) -> Maybe(rl.Texture) {
-	if texture, exists := self.textures[textureId]; exists do return texture
+get_texture :: proc(self: ^AssetContext, texture_id: string) -> Maybe(rl.Texture) {
+	if texture, exists := self.textures[texture_id]; exists do return texture
 	return nil
 }
 
-unloadTexture :: proc(self: ^AssetContext, textureId: string) {
-	texture, exists := self.textures[textureId]
+unload_texture :: proc(self: ^AssetContext, texture_id: string) {
+	texture, exists := self.textures[texture_id]
 	if !exists do return
 
-	log.debugf("unloading texture '%s' (id %d)...", textureId, texture.id)
+	log.debugf("unloading texture '%s' (id %d)...", texture_id, texture.id)
 	rl.UnloadTexture(texture)
-	delete_key(&self.textures, textureId)
+	delete_key(&self.textures, texture_id)
 }
 
-deleteAssetContext :: proc(self: ^AssetContext) {
-	unloadTextures(self)
-	unloadFonts(self)
+delete_asset_context :: proc(self: ^AssetContext) {
+	unload_textures(self)
+	unload_fonts(self)
 }
 
-unloadTextures :: proc(self: ^AssetContext) {
-	for textureName, texture in self.textures {
-		log.debugf("unloading texture '%s' (id %d)...", textureName, texture.id)
+unload_textures :: proc(self: ^AssetContext) {
+	for texture_name, texture in self.textures {
+		log.debugf("unloading texture '%s' (id %d)...", texture_name, texture.id)
 		rl.UnloadTexture(texture)
-		delete_key(&self.textures, textureName)
+		delete_key(&self.textures, texture_name)
 	}
 	// Force clear the textures
 	delete_map(self.textures)
 	self.textures = nil
 }
 
-unloadFonts :: proc(self: ^AssetContext) {
-	for fontName, font in self.fonts {
-		log.debugf("unloading font '%s'...", fontName)
+unload_fonts :: proc(self: ^AssetContext) {
+	for font_name, font in self.fonts {
+		log.debugf("unloading font '%s'...", font_name)
 		rl.UnloadFont(font)
-		delete_key(&self.fonts, fontName)
+		delete_key(&self.fonts, font_name)
 	}
 	// Force clear the fonts
 	delete_map(self.fonts)

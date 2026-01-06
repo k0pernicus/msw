@@ -8,69 +8,69 @@ OnHoverAction :: proc() -> string
 // Object to store a texture and
 // its current coordinates
 Entity :: struct {
-	id:        string,
-	textureId: string,
-	position:  Coordinate2D,
-	size:      Size2D,
-	active:    bool,
-	onClick:   OnClickAction,
-	onHover:   OnHoverAction,
+	id:         string,
+	texture_id: string,
+	position:   Coordinate2D,
+	size:       Size2D,
+	active:     bool,
+	on_click:   OnClickAction,
+	on_hover:   OnHoverAction,
 }
 
-newEntity :: proc(
+on_click :: proc(
 	id: string,
-	textureId: string,
+	texture_id: string,
 	position: Coordinate2D,
 	active: bool = false,
-	onClick: OnClickAction = noAction,
-	onHover: OnHoverAction = noAction,
+	on_click: OnClickAction = no_action,
+	on_hover: OnHoverAction = no_action,
 ) -> Entity {
-	return Entity{id, textureId, position, [2]i32{}, active, onClick, onHover}
+	return Entity{id, texture_id, position, [2]i32{}, active, on_click, on_hover}
 }
 
-deleteEntity :: proc(self: ^Entity) {
+delete_entity :: proc(self: ^Entity) {
 	self.position = [2]f32{}
 	self.size = [2]i32{}
 	self.active = false
-	self.onClick = nil
-	self.onHover = nil
+	self.on_click = nil
+	self.on_hover = nil
 	delete(self.id)
-	delete(self.textureId)
+	delete(self.texture_id)
 }
 
-setEntitySize :: proc(self: ^Entity, size: [2]i32) {
+set_entity_size :: proc(self: ^Entity, size: [2]i32) {
 	self.size = size
 }
 
-setEntityActivity :: proc(self: ^Entity, activity: bool) {
+set_entity_activity :: proc(self: ^Entity, activity: bool) {
 	self.active = activity
 }
 
 // Move the entity by `movement`
 // This function does not erase the current position by `movement`!
-moveEntity :: proc(self: ^Entity, movement: Coordinate2D, gameCtx: ^GameContext) {
-	newPosition := self.position + movement
-	if newPosition.x < 0 ||
-	   newPosition.x > f32(gameCtx.world.size.x) ||
-	   newPosition.y < 0 ||
-	   newPosition.y > f32(gameCtx.world.size.y) {
+move_entity :: proc(self: ^Entity, movement: Coordinate2D, game_ctx: ^GameContext) {
+	new_position := self.position + movement
+	if new_position.x < 0 ||
+	   new_position.x > f32(game_ctx.world.size.x) ||
+	   new_position.y < 0 ||
+	   new_position.y > f32(game_ctx.world.size.y) {
 		return
 	}
-	self.position = newPosition
+	self.position = new_position
 }
 
-setEntityPosition :: proc(self: ^Entity, newPosition: Coordinate2D, gameCtx: ^GameContext) {
-	self.position = newPosition
+set_entity_position :: proc(self: ^Entity, new_position: Coordinate2D, game_ctx: ^GameContext) {
+	self.position = new_position
 }
 
-noAction :: proc() -> string {
+no_action :: proc() -> string {
 	return "..."
 }
 
-actionSayMiaouh :: proc() -> string {
+action_say_miaouh :: proc() -> string {
 	return "Miaouh!"
 }
 
-actionSayGrrh :: proc() -> string {
+action_say_grrh :: proc() -> string {
 	return "Grrrrh..."
 }

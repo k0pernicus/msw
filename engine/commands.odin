@@ -15,15 +15,15 @@ DrawTextCommand :: struct {
 	space:    SpaceType,
 }
 
-DrawCursorCommand :: struct {
-	newStyle: CursorStyle,
+new_style :: struct {
+	new_style: CursorStyle,
 }
 
 DrawCommand :: union {
 	DrawTextCommand,
 	// Maybe it does not make sense to keep the cursor command here
 	// It can be in a sort of "event queue" and handled there
-	DrawCursorCommand,
+	new_style,
 }
 
-deleteDrawCommand :: proc(self: ^DrawCommand) {}
+delete_draw_command :: proc(self: ^DrawCommand) {}

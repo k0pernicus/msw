@@ -15,39 +15,39 @@ World :: struct {
 	grid:     SpatialGrid, // Lookup table of entities
 }
 
-initWorld :: proc(self: ^World, assetCtx: ^AssetContext, screenWidth, screenHeight: u32) {
+init_world :: proc(self: ^World, asset_ctx: ^AssetContext, screen_width, screen_height: u32) {
 	if self == nil {
 		return
 	}
-	self.assets = assetCtx
+	self.assets = asset_ctx
 	// self.camera = initCamera2D({f32(screenWidth) / 2, f32(screenHeight) / 2}, {0, 0})
-	self.camera = initCamera2D({0, 0}, {0, 0})
-	self.size = [2]u32{screenWidth, screenHeight}
+	self.camera = init_camera_2D({0, 0}, {0, 0})
+	self.size = [2]u32{screen_width, screen_height}
 	self.cursor = Cursor {
-		position = getMouseWorldPosition(&self.camera),
+		position = get_mouse_world_position(&self.camera),
 	}
 }
 
 // Delete all items stored in the World object
-deleteWorld :: proc(self: ^World) {
-	deleteSpatialGrid(&self.grid)
-	deleteAssetContext(self.assets)
+delete_world :: proc(self: ^World) {
+	delete_spatial_grid(&self.grid)
+	delete_asset_context(self.assets)
 	for &entity in self.entities {
-		deleteEntity(&entity)
+		delete_entity(&entity)
 	}
 	delete_dynamic_array(self.entities)
 }
 
 // Append an entity (copy) in the current dynamic array of entities
 // of the current World object
-addEntity :: proc(self: ^World, e: Entity) {
+add_entity :: proc(self: ^World, e: Entity) {
 	// Append the texture
-	texture, err := loadTexture(self.assets, e.textureId)
+	texture, err := load_texture(self.assets, e.texture_id)
 	if err != nil {
 		log.errorf("cannot create entity with name '%s' : invalid textureId", e.id)
 		return
 	}
 	em := e
-	setEntitySize(&em, {texture.width, texture.height})
+	set_entity_size(&em, {texture.width, texture.height})
 	append(&self.entities, em)
 }

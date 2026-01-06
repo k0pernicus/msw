@@ -13,7 +13,7 @@ Cursor :: struct {
 	hidden:   bool,
 }
 
-initCursor :: proc() -> Cursor {
+init_cursor :: proc() -> Cursor {
 	cursor := Cursor {
 		position = rl.GetMousePosition(),
 		style    = CursorStyle.Default,
@@ -22,7 +22,7 @@ initCursor :: proc() -> Cursor {
 	return cursor
 }
 
-drawCursor :: proc(self: ^Cursor) {
+draw_cursor :: proc(self: ^Cursor) {
 	if self.hidden do return
 	switch self.style {
 	case CursorStyle.Default:
@@ -44,7 +44,7 @@ hidden :: proc(self: ^Cursor) {
 	rl.HideCursor()
 }
 
-changeCursorStyle :: proc(self: ^Cursor, newStyle: CursorStyle) {
-	if self.style == newStyle do return
-	self.style = newStyle
+change_cursor_style :: proc(self: ^Cursor, new_style: CursorStyle) {
+	if self.style == new_style do return
+	self.style = new_style
 }
