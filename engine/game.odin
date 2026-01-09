@@ -4,6 +4,7 @@ import "../editor"
 import "../game"
 import "core:fmt"
 import "core:log"
+import "core:math"
 import rl "vendor:raylib"
 
 MAX_DRAW_COMMANDS :: 1024
@@ -58,12 +59,14 @@ get_mouse_world_position :: proc(camera: ^Camera2D) -> [2]f32 {
 
 // Handles all the information for a frame of the game
 GameContext :: struct {
-	world:          World,
-	assets:         ^AssetContext,
-	quit:           bool,
-	editor_context: editor.EditorContext,
-	draw_commands:  [MAX_DRAW_COMMANDS]Maybe(DrawCommand),
-	current_level:  ^game.Level,
+	world:           World,
+	assets:          ^AssetContext,
+	quit:            bool,
+	editor_context:  editor.EditorContext,
+	draw_commands:   [MAX_DRAW_COMMANDS]Maybe(DrawCommand),
+	current_level:   ^game.Level,
+	frame_count:     i64,
+	animation_speed: f32,
 }
 
 delete_game_context :: proc(self: ^GameContext) {
@@ -76,12 +79,12 @@ delete_game_context :: proc(self: ^GameContext) {
 submit_draw_command :: proc(self: ^GameContext, cmd: DrawCommand) {
 	assert(c_draw_command_idx < MAX_DRAW_COMMANDS)
 	self.draw_commands[c_draw_command_idx] = cmd
-	switch c in cmd {
-	case DrawTextCommand:
-		log.debugf("submitting draw text command: %v", c)
-	case new_style:
-		log.debugf("submitting draw cursor command: %v", c)
-	}
+	// switch c in cmd {
+	// case DrawTextCommand:
+	// 	log.debugf("submitting draw text command: %v", c)
+	// case new_style:
+	// 	log.debugf("submitting draw cursor command: %v", c)
+	// }
 	c_draw_command_idx += 1
 }
 
@@ -98,8 +101,8 @@ update_game :: proc(self: ^GameContext) {
 			rl.Rectangle {
 				x = entity.position.x,
 				y = entity.position.y,
-				width = f32(self.world.assets.textures[entity.texture_id].width),
-				height = f32(self.world.assets.textures[entity.texture_id].height),
+				width = f32(entity.size.x),
+				height = f32(entity.size.y),
 			},
 		) {
 			pointing_to_entity = true
@@ -122,6 +125,29 @@ update_game :: proc(self: ^GameContext) {
 	// Submit change of cursor
 	cursorStyle := pointing_to_entity ? CursorStyle.Pointing : CursorStyle.Default
 	submit_draw_command(self, new_style{cursorStyle})
+
+	if self.editor_context.enabled {
+		update_editor_logic(self)
+	}
+
+	if (self.frame_count % i64(self.animation_speed)) == 0 {
+		for _, &entity in self.assets.assets {
+			switch t in entity.content {
+			case AnimationContext:
+				animation := &entity.content.(AnimationContext)
+				animation.current_frame = (animation.current_frame + 1) % animation.nb_frames
+
+				frame_data_ptr := cast([^]u8)animation.image.data
+				pixel_size := animation.image.width * animation.image.height * 4
+				offset := animation.current_frame * pixel_size
+
+				rl.UpdateTexture(animation.texture, &frame_data_ptr[offset])
+			case rl.Font:
+				continue
+			case rl.Texture:
+				continue
+			}}
+	}
 }
 
 draw_command :: proc(self: ^GameContext, cmd: ^DrawCommand) {
@@ -153,10 +179,18 @@ render_game :: proc(self: ^GameContext) {
 	)
 
 	for &entity in self.world.entities {
-		r_texture := get_texture(self.assets, entity.texture_id)
-		if r_texture == nil do continue
-		texture := r_texture.(rl.Texture)
-		rl.DrawTextureV(texture, entity.position, rl.WHITE)
+		r_asset := get_asset(self.assets, entity.texture_id)
+		if r_asset == nil do continue
+		switch t in r_asset {
+		case rl.Texture:
+			texture := r_asset.(rl.Texture)
+			rl.DrawTextureV(texture, entity.position, rl.WHITE)
+		case AnimationContext:
+			texture := r_asset.(AnimationContext).texture
+			rl.DrawTextureV(texture, entity.position, rl.WHITE)
+		case rl.Font:
+			unimplemented("implement draw function for rl.Font")
+		}
 	}
 
 	// Draw the cursor with its latest associated style
@@ -171,6 +205,26 @@ render_game :: proc(self: ^GameContext) {
 			draw_command(self, &cmd)
 		}
 	}
+
+	if self.editor_context.enabled && self.editor_context.state.active_texture_id != "" {
+		mouse_world := get_mouse_world_position(&self.world.camera)
+
+		snap_x := f32(i32(mouse_world.x / CELL_SIZE) * CELL_SIZE)
+		snap_y := f32(i32(mouse_world.y / CELL_SIZE) * CELL_SIZE)
+
+		asset := self.assets.assets[self.editor_context.state.active_texture_id]
+		switch t in asset.content {
+		case rl.Texture:
+			texture := asset.content.(rl.Texture)
+			rl.DrawTextureV(texture, {snap_x, snap_y}, rl.Fade(rl.WHITE, 0.5))
+		case AnimationContext:
+			texture := asset.content.(AnimationContext).texture
+			rl.DrawTextureV(texture, {snap_x, snap_y}, rl.Fade(rl.WHITE, 0.5))
+		case rl.Font:
+			unimplemented("implement draw function for rl.Font")
+		}
+	}
+
 	end_camera(&self.world.camera)
 
 	// Now, draw in other spaces
@@ -190,6 +244,90 @@ render_game :: proc(self: ^GameContext) {
 		self.draw_commands[cmd_idx] = nil
 	}
 	c_draw_command_idx = 0
+}
+
+tile_exists_at :: proc(self: ^GameContext, x, y: f32) -> bool {
+	// For now, a simple loop is fine.
+	// Later, you can use your Spatial Grid here for instant lookups!
+	for e in self.world.entities {
+		if e.position.x == x && e.position.y == y {
+			return true
+		}
+	}
+	return false
+}
+
+update_editor_logic :: proc(self: ^GameContext) {
+	if self.editor_context.state.is_hovering do return
+
+	if self.editor_context.state.active_texture_id == "" do return
+
+	mouse_world := get_mouse_world_position(&self.world.camera)
+	snap_x := f32(i32(mouse_world.x / CELL_SIZE) * CELL_SIZE)
+	snap_y := f32(i32(mouse_world.y / CELL_SIZE) * CELL_SIZE)
+
+	if rl.IsMouseButtonDown(.LEFT) {
+		// Check if something is already there to avoid stacking 100 tiles
+		if !tile_exists_at(self, snap_x, snap_y) {
+			asset := self.assets.assets[self.editor_context.state.active_texture_id]
+			switch t in asset.content {
+			case rl.Font:
+				return
+			case rl.Texture:
+				new_tile := Entity {
+					id         = fmt.aprintf("entity_%d", len(self.world.entities)),
+					// TODO : random id ??
+					position   = {snap_x, snap_y},
+					texture_id = self.editor_context.state.active_texture_id,
+					size       = {
+						asset.content.(rl.Texture).width,
+						asset.content.(rl.Texture).height,
+					},
+					active     = true,
+					on_click   = no_action,
+					on_hover   = no_action,
+				}
+				append(&self.world.entities, new_tile)
+
+				new_entity_desc := game.EntityDesc {
+					id         = new_tile.id,
+					texture_id = new_tile.texture_id,
+					position   = new_tile.position,
+				}
+				append(&self.current_level.entities, new_entity_desc)
+			case AnimationContext:
+				texture := asset.content.(AnimationContext).texture
+				new_tile := Entity {
+					id         = fmt.aprintf("entity_%d", len(self.world.entities)),
+					// TODO : random id ??
+					position   = {snap_x, snap_y},
+					texture_id = self.editor_context.state.active_texture_id,
+					size       = {texture.width, texture.height},
+					active     = true,
+					on_click   = no_action,
+					on_hover   = no_action,
+				}
+				append(&self.world.entities, new_tile)
+
+				new_entity_desc := game.EntityDesc {
+					id         = new_tile.id,
+					texture_id = new_tile.texture_id,
+					position   = new_tile.position,
+				}
+				append(&self.current_level.entities, new_entity_desc)
+			}
+		}
+	}
+
+	if rl.IsMouseButtonDown(.RIGHT) {
+		for &e, idx in self.world.entities {
+			if e.position.x == snap_x && e.position.y == snap_y {
+				unordered_remove(&self.world.entities, idx)
+				unordered_remove(&self.current_level.entities, idx)
+				break
+			}
+		}
+	}
 }
 
 render_editor :: proc(self: ^GameContext) {
@@ -215,9 +353,18 @@ render_editor :: proc(self: ^GameContext) {
 
 	end_camera(&self.world.camera)
 
+	draw_sidebar(self)
 
+	draw_tile_selector(self)
+}
+
+draw_sidebar :: proc(self: ^GameContext) {
 	// Define a panel area for our debug info
 	debug_panel_rect := rl.Rectangle{0, 0, 300, f32(rl.GetScreenHeight())}
+
+	mouse_pos := rl.GetMousePosition()
+	// Reset
+	self.editor_context.state.is_hovering = rl.CheckCollisionPointRec(mouse_pos, debug_panel_rect)
 
 	curr_y_top: f32 = 46
 	curr_y_bottom: f32 = f32(rl.GetScreenHeight()) - curr_y_top
@@ -252,7 +399,28 @@ render_editor :: proc(self: ^GameContext) {
 	)
 	rl.GuiLabel(get_debug_rect_from_top(&curr_y_top), cam_str)
 
-	// Example Toggle button to show how RayGui handles input
+	animation_slider_bounds := get_debug_rect_from_top(&curr_y_top)
+	rl.GuiSlider(
+		{
+			animation_slider_bounds.x + 80,
+			animation_slider_bounds.y,
+			animation_slider_bounds.width - 100,
+			animation_slider_bounds.height,
+		},
+		"Frame delay",
+		fmt.ctprintf("%d", i32(self.animation_speed)),
+		&self.animation_speed,
+		3,
+		15,
+	)
+
+	// Save the current level
+	if rl.GuiButton(getDebug_rect_from_bottom(&curr_y_bottom), "SAVE LEVEL") {
+		game.save_level(&self.assets.levels, self.current_level^, game.LEVELS_DESCRIPTION)
+		free_all(context.temp_allocator)
+	}
+
+	// Reset the camera position
 	if rl.GuiButton(getDebug_rect_from_bottom(&curr_y_bottom), "RESET CAMERA") {
 		self.world.camera.object.offset = {
 			f32(rl.GetScreenWidth()) / 2,
@@ -263,5 +431,92 @@ render_editor :: proc(self: ^GameContext) {
 			f32(self.current_level.dimensions.y) / 2.0,
 		}
 		self.world.camera.object.zoom = 1.0
+	}
+}
+
+draw_tile_selector :: proc(self: ^GameContext) {
+	sidebar_w: f32 = 300
+	sidebar := rl.Rectangle {
+		f32(rl.GetScreenWidth()) - sidebar_w,
+		0,
+		sidebar_w,
+		f32(rl.GetScreenHeight()) / 3,
+	}
+	rl.GuiWindowBox(sidebar, "Textures")
+
+	tooltip_to_draw: string = ""
+	mouse_pos := rl.GetMousePosition()
+	self.editor_context.state.is_hovering |= rl.CheckCollisionPointRec(mouse_pos, sidebar)
+
+	padding: f32 = 10
+	cell_size: f32 = 32 // Size of the texture preview
+	text_height: f32 = 8 // Space for the ID text
+	vertical_spacing: f32 = 10 // Space between rows
+
+	// Calculate how many columns fit in the sidebar
+	available_width := sidebar.width - (padding * 2)
+	cols := i32(math.floor(available_width / (cell_size + padding)))
+	if cols < 1 do cols = 1
+
+	i: i32 = 0
+	for asset_id, asset in self.assets.assets {
+		if type_of(asset.content) == rl.Font do continue
+
+		texture: rl.Texture
+		switch t in asset.content {
+		case rl.Texture:
+			texture = asset.content.(rl.Texture)
+		case AnimationContext:
+			texture = asset.content.(AnimationContext).texture
+		case rl.Font:
+			continue
+		}
+
+		row := i / cols
+		col := i % cols
+
+		grid_x := sidebar.x + padding + (f32(col) * (cell_size + padding))
+		grid_y := sidebar.y + 40 + (f32(row) * (cell_size + text_height + vertical_spacing))
+
+		preview_rect := rl.Rectangle{grid_x, grid_y, cell_size, cell_size}
+		src := rl.Rectangle{0, 0, f32(texture.width), f32(texture.height)}
+
+		// Draw the Texture
+		rl.DrawTexturePro(texture, src, preview_rect, {0, 0}, 0, rl.WHITE)
+
+		// Hover/Selection Logic
+		is_texture_hovered := rl.CheckCollisionPointRec(mouse_pos, preview_rect)
+		if self.editor_context.state.active_texture_id == asset_id {
+			rl.DrawRectangleLinesEx(preview_rect, 2, rl.YELLOW)
+		} else if is_texture_hovered {
+			rl.DrawRectangleLinesEx(preview_rect, 1, rl.RAYWHITE)
+			tooltip_to_draw = asset_id
+		}
+
+		// Draw Label (Truncated if necessary)
+		short_id := asset_id
+		if len(short_id) > 8 do short_id = short_id[:8]
+		rl.DrawText(fmt.ctprint(short_id), i32(grid_x), i32(grid_y + cell_size + 2), 10, rl.GRAY)
+
+		if is_texture_hovered && rl.IsMouseButtonPressed(.LEFT) {
+			self.editor_context.state.active_texture_id = asset_id
+		}
+
+		i += 1
+	}
+
+	if tooltip_to_draw != "" {
+		text_w := rl.MeasureText(fmt.ctprint(tooltip_to_draw), 10)
+		tip_rect := rl.Rectangle{mouse_pos.x + 15, mouse_pos.y, f32(text_w + 10), 20}
+
+		rl.DrawRectangleRec(tip_rect, rl.BLACK)
+		rl.DrawRectangleLinesEx(tip_rect, 1, rl.GRAY)
+		rl.DrawText(
+			fmt.ctprint(tooltip_to_draw),
+			i32(tip_rect.x + 5),
+			i32(tip_rect.y + 5),
+			10,
+			rl.WHITE,
+		)
 	}
 }

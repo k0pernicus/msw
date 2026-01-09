@@ -105,11 +105,12 @@ main :: proc() {
 	// Init the context of the game
 	// TODO : should be in the heap !!!!
 	ctx := engine.GameContext{}
-	ctx.assets = new(engine.AssetContext)
+	ctx.assets = assets
 	ctx.assets.levels = levels
 	engine.init_world(&ctx.world, ctx.assets, u32(screen_width), u32(screen_height))
 	ctx.quit = false
 	ctx.editor_context = editor.initEditorContext()
+	ctx.animation_speed = 4.0
 
 	// Do not forget to free all object from the game context
 	defer engine.delete_game_context(&ctx)
@@ -135,23 +136,12 @@ main :: proc() {
 			entity.id,
 		)
 
-		texture_file: Maybe(string) = nil
-		for asset in assets {
-			if asset.id == entity.texture_id {
-				texture_file = asset.texture_file
-			}
-		}
-		if texture_file == nil {
-			log.errorf("texture with id '%s' not found", entity.texture_id)
-			continue
-		}
-
 		engine.add_entity(
 			&ctx.world,
 			// Copy the strings as everything is stored in temp_allocator
-			engine.on_click(
+			engine.init_entity(
 				strings.clone(entity.id),
-				strings.clone(texture_file.(string)),
+				entity.texture_id,
 				entity.position,
 				on_click = engine.action_say_miaouh,
 				on_hover = engine.action_say_grrh,
@@ -178,5 +168,7 @@ main :: proc() {
 
 		// Force to free all allocations in the current context
 		free_all(context.temp_allocator)
+
+		ctx.frame_count += 1
 	}
 }

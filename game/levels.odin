@@ -17,10 +17,9 @@ EntityDesc :: struct {
 	position:   Coordinate2D `json:"position"`,
 }
 
-delete_entities :: proc(entites: ^[]EntityDesc) {
+delete_entities :: proc(entites: ^[dynamic]EntityDesc) {
 	for &entity in entites {
 		delete_string(entity.id)
-		delete_string(entity.texture_id)
 	}
 }
 
@@ -40,7 +39,7 @@ delete_tiles :: proc(tiles: ^[]TileDesc) {
 Level :: struct {
 	name:       string `json:"name"`,
 	dimensions: Size2D `json:"dimensions"`,
-	entities:   []EntityDesc `json:"entities"`,
+	entities:   [dynamic]EntityDesc `json:"entities"`,
 	tiles:      []TileDesc `json:"tiles"`,
 }
 
@@ -49,6 +48,7 @@ delete_levels :: proc(levels: ^[]Level) {
 		delete_string(level.name)
 		delete_entities(&level.entities)
 		delete_tiles(&level.tiles)
+		delete_dynamic_array(level.entities)
 	}
 }
 

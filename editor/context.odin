@@ -1,8 +1,8 @@
 package editor
 
 EditorState :: struct {
-	active_tile_id: i32,
-	is_hovering:    bool,
+	active_texture_id: string,
+	is_hovering:       bool,
 }
 
 EditorContext :: struct {

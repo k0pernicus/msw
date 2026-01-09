@@ -1,6 +1,6 @@
 package engine
 
-import "core:log"
+import rl "vendor:raylib"
 
 // Stored all objects related to a World
 World :: struct {
@@ -20,12 +20,12 @@ init_world :: proc(self: ^World, asset_ctx: ^AssetContext, screen_width, screen_
 		return
 	}
 	self.assets = asset_ctx
-	// self.camera = initCamera2D({f32(screenWidth) / 2, f32(screenHeight) / 2}, {0, 0})
 	self.camera = init_camera_2D({0, 0}, {0, 0})
 	self.size = [2]u32{screen_width, screen_height}
 	self.cursor = Cursor {
 		position = get_mouse_world_position(&self.camera),
 	}
+	self.grid = initSpatialGrid()
 }
 
 // Delete all items stored in the World object
@@ -41,13 +41,24 @@ delete_world :: proc(self: ^World) {
 // Append an entity (copy) in the current dynamic array of entities
 // of the current World object
 add_entity :: proc(self: ^World, e: Entity) {
+	content := get_asset(self.assets, e.texture_id)
+	if content == nil do return
+
 	// Append the texture
-	texture, err := load_texture(self.assets, e.texture_id)
-	if err != nil {
-		log.errorf("cannot create entity with name '%s' : invalid textureId", e.id)
-		return
-	}
 	em := e
-	set_entity_size(&em, {texture.width, texture.height})
-	append(&self.entities, em)
+
+	switch t in content {
+	case rl.Font:
+		return
+	case rl.Texture:
+		set_entity_size(&em, {content.(rl.Texture).width, content.(rl.Texture).height})
+		append(&self.entities, em)
+	case AnimationContext:
+		set_entity_size(
+			&em,
+			{content.(AnimationContext).image.width, content.(AnimationContext).image.height},
+		)
+		append(&self.entities, em)
+	}
+
 }

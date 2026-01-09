@@ -1,6 +1,42 @@
 [
     {
         "id": "cat",
+        "type": "texture",
         "texture_file": "cat.png"
+    },
+    {
+        "id": "jungle_char_jump",
+        "type": "texture",
+        "texture_file": "jungle/character/sprites/jump.png"
+    },
+    {
+        "id": "jungle_char_idle",
+        "type": "animation",
+        "texture_file": "jungle/character/sprites/idle.gif"
+    },
+    {
+        "id": "jungle_char_ledge_grab",
+        "type": "animation",
+        "texture_file": "jungle/character/sprites/ledge_grab.gif"
+    },
+    {
+        "id": "jungle_char_mid_air",
+        "type": "animation",
+        "texture_file": "jungle/character/sprites/mid_air.gif"
+    },
+    {
+        "id": "jungle_char_run",
+        "type": "animation",
+        "texture_file": "jungle/character/sprites/run.gif"
+    },
+    {
+        "id": "jungle_char_idle",
+        "type": "animation",
+        "texture_file": "jungle/character/sprites/idle.gif"
+    },
+    {
+        "id": "jungle_char_landing",
+        "type": "texture",
+        "texture_file": "jungle/character/sprites/landing.png"
     }
 ]

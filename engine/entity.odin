@@ -17,7 +17,7 @@ Entity :: struct {
 	on_hover:   OnHoverAction,
 }
 
-on_click :: proc(
+init_entity :: proc(
 	id: string,
 	texture_id: string,
 	position: Coordinate2D,
@@ -34,6 +34,8 @@ delete_entity :: proc(self: ^Entity) {
 	self.active = false
 	self.on_click = nil
 	self.on_hover = nil
+	// TODO : check why it crash on new entities
+	// Seems like a memory issue (is the string still exists ???)
 	delete(self.id)
 	delete(self.texture_id)
 }

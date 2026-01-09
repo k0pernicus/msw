@@ -12,7 +12,11 @@ GRID_WIDTH :: RENDER_WIDTH / CELL_SIZE
 GRID_HEIGHT :: RENDER_WIDTH / CELL_SIZE
 
 SpatialGrid :: struct {
-	cells: [GRID_WIDTH][GRID_HEIGHT][dynamic]^Entity,
+	cells: ^[GRID_WIDTH][GRID_HEIGHT][dynamic]^Entity,
+}
+
+initSpatialGrid :: proc() -> SpatialGrid {
+	return SpatialGrid{cells = new([GRID_WIDTH][GRID_HEIGHT][dynamic]^Entity)}
 }
 
 delete_spatial_grid :: proc(self: ^SpatialGrid) {
@@ -22,6 +26,8 @@ delete_spatial_grid :: proc(self: ^SpatialGrid) {
 			delete_dynamic_array(self.cells[x][y])
 		}
 	}
+	free(self.cells)
+	self.cells = nil
 }
 
 register_entities_in_grid :: proc(self: ^SpatialGrid, entities: []Entity) {
