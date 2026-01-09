@@ -333,6 +333,9 @@ update_editor_logic :: proc(self: ^GameContext) {
 render_editor :: proc(self: ^GameContext) {
 	if !editor.editor_mode(&self.editor_context) do return
 
+	// Reset the hovering state
+	self.editor_context.state.is_hovering = false
+
 	begin_camera(&self.world.camera)
 
 	draw_dynamic_grid(&self.world.camera, CELL_SIZE, self.current_level.dimensions)
@@ -354,7 +357,6 @@ render_editor :: proc(self: ^GameContext) {
 	end_camera(&self.world.camera)
 
 	draw_sidebar(self)
-
 	draw_tile_selector(self)
 }
 
@@ -363,8 +365,7 @@ draw_sidebar :: proc(self: ^GameContext) {
 	debug_panel_rect := rl.Rectangle{0, 0, 300, f32(rl.GetScreenHeight())}
 
 	mouse_pos := rl.GetMousePosition()
-	// Reset
-	self.editor_context.state.is_hovering = rl.CheckCollisionPointRec(mouse_pos, debug_panel_rect)
+	self.editor_context.state.is_hovering |= rl.CheckCollisionPointRec(mouse_pos, debug_panel_rect)
 
 	curr_y_top: f32 = 46
 	curr_y_bottom: f32 = f32(rl.GetScreenHeight()) - curr_y_top
