@@ -7,12 +7,12 @@ World :: struct {
 	// To be freed with `deleteWorld` function
 	// when the world is not used anymore
 	// entities: [dynamic]Entity,
-	entities: [dynamic]Entity,
-	assets:   ^AssetContext,
-	camera:   Camera2D,
-	cursor:   Cursor,
-	size:     [2]u32, // width, height
-	grid:     SpatialGrid, // Lookup table of entities
+	entities:    [dynamic]Entity,
+	assets:      ^AssetContext,
+	camera:      Camera2D,
+	cursor:      Cursor,
+	screen_size: [2]u32, // width, height
+	grid:        SpatialGrid, // Lookup table of entities
 }
 
 init_world :: proc(self: ^World, asset_ctx: ^AssetContext, screen_width, screen_height: u32) {
@@ -21,7 +21,7 @@ init_world :: proc(self: ^World, asset_ctx: ^AssetContext, screen_width, screen_
 	}
 	self.assets = asset_ctx
 	self.camera = init_camera_2D({0, 0}, {0, 0})
-	self.size = [2]u32{screen_width, screen_height}
+	self.screen_size = [2]u32{screen_width, screen_height}
 	self.cursor = Cursor {
 		position = get_mouse_world_position(&self.camera),
 	}

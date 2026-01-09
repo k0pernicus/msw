@@ -93,35 +93,9 @@ update_game :: proc(self: ^GameContext) {
 	get_inputs(self)
 	camera_movement(self)
 	self.world.cursor.position = get_mouse_world_position(&self.world.camera)
-	// This boolean is used to change the cursor (TODO : check if )
+	// This boolean is used to change the cursor (TODO)
 	pointing_to_entity: bool = false
-	for &entity in self.world.entities {
-		if rl.CheckCollisionPointRec(
-			self.world.cursor.position,
-			rl.Rectangle {
-				x = entity.position.x,
-				y = entity.position.y,
-				width = f32(entity.size.x),
-				height = f32(entity.size.y),
-			},
-		) {
-			pointing_to_entity = true
-			displayText :=
-				rl.IsMouseButtonDown(rl.MouseButton.LEFT) ? fmt.ctprintf("%s", entity.on_click()) : fmt.ctprintf("%s", entity.on_hover())
-			submit_draw_command(
-				self,
-				DrawTextCommand {
-					position = {i32(entity.position.x) + 20, i32(entity.position.y) - 20},
-					size     = {0, 15}, // font size of 15 pixels
-					color    = rl.RED,
-					text     = displayText,
-					space    = .World,
-				},
-			)
-		}
-	}
 	register_entities_in_grid(&self.world.grid, self.world.entities[:])
-	// TODO : add the entities in the world grid
 	// Submit change of cursor
 	cursorStyle := pointing_to_entity ? CursorStyle.Pointing : CursorStyle.Default
 	submit_draw_command(self, new_style{cursorStyle})
@@ -275,17 +249,17 @@ update_editor_logic :: proc(self: ^GameContext) {
 				return
 			case rl.Texture:
 				new_tile := Entity {
-					id         = fmt.aprintf("entity_%d", len(self.world.entities)),
+					id           = fmt.aprintf("entity_%d", len(self.world.entities)),
 					// TODO : random id ??
-					position   = {snap_x, snap_y},
-					texture_id = self.editor_context.state.active_texture_id,
-					size       = {
+					position     = {snap_x, snap_y},
+					texture_id   = self.editor_context.state.active_texture_id,
+					size         = {
 						asset.content.(rl.Texture).width,
 						asset.content.(rl.Texture).height,
 					},
-					active     = true,
-					on_click   = no_action,
-					on_hover   = no_action,
+					active       = true,
+					on_collision = do_nothing_on_collision,
+					on_input     = do_nothing_on_input,
 				}
 				append(&self.world.entities, new_tile)
 
@@ -298,14 +272,14 @@ update_editor_logic :: proc(self: ^GameContext) {
 			case AnimationContext:
 				texture := asset.content.(AnimationContext).texture
 				new_tile := Entity {
-					id         = fmt.aprintf("entity_%d", len(self.world.entities)),
+					id           = fmt.aprintf("entity_%d", len(self.world.entities)),
 					// TODO : random id ??
-					position   = {snap_x, snap_y},
-					texture_id = self.editor_context.state.active_texture_id,
-					size       = {texture.width, texture.height},
-					active     = true,
-					on_click   = no_action,
-					on_hover   = no_action,
+					position     = {snap_x, snap_y},
+					texture_id   = self.editor_context.state.active_texture_id,
+					size         = {texture.width, texture.height},
+					active       = true,
+					on_collision = do_nothing_on_collision,
+					on_input     = do_nothing_on_input,
 				}
 				append(&self.world.entities, new_tile)
 

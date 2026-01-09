@@ -1,20 +1,18 @@
 package engine
 
-// TODO : change to any function (interface ?)
-OnClickAction :: proc() -> string
-// TODO : change to any function (interface ?)
-OnHoverAction :: proc() -> string
+OnCollisionCallback :: proc(self: ^Entity, other: ^Entity, ctx: ^World)
+OnInputCallback :: proc(self: ^Entity, ctx: ^World)
 
 // Object to store a texture and
 // its current coordinates
 Entity :: struct {
-	id:         string,
-	texture_id: string,
-	position:   Coordinate2D,
-	size:       Size2D,
-	active:     bool,
-	on_click:   OnClickAction,
-	on_hover:   OnHoverAction,
+	id:           string,
+	texture_id:   string,
+	position:     Coordinate2D,
+	size:         Size2D,
+	active:       bool,
+	on_collision: OnCollisionCallback,
+	on_input:     OnInputCallback,
 }
 
 init_entity :: proc(
@@ -22,18 +20,18 @@ init_entity :: proc(
 	texture_id: string,
 	position: Coordinate2D,
 	active: bool = false,
-	on_click: OnClickAction = no_action,
-	on_hover: OnHoverAction = no_action,
+	on_collision: OnCollisionCallback = do_nothing_on_collision,
+	on_input: OnInputCallback = do_nothing_on_input,
 ) -> Entity {
-	return Entity{id, texture_id, position, [2]i32{}, active, on_click, on_hover}
+	return Entity{id, texture_id, position, [2]i32{}, active, on_collision, on_input}
 }
 
 delete_entity :: proc(self: ^Entity) {
 	self.position = [2]f32{}
 	self.size = [2]i32{}
 	self.active = false
-	self.on_click = nil
-	self.on_hover = nil
+	self.on_collision = nil
+	self.on_input = nil
 	// TODO : check why it crash on new entities
 	// Seems like a memory issue (is the string still exists ???)
 	delete(self.id)
@@ -53,9 +51,9 @@ set_entity_activity :: proc(self: ^Entity, activity: bool) {
 move_entity :: proc(self: ^Entity, movement: Coordinate2D, game_ctx: ^GameContext) {
 	new_position := self.position + movement
 	if new_position.x < 0 ||
-	   new_position.x > f32(game_ctx.world.size.x) ||
+	   new_position.x > f32(game_ctx.world.screen_size.x) ||
 	   new_position.y < 0 ||
-	   new_position.y > f32(game_ctx.world.size.y) {
+	   new_position.y > f32(game_ctx.world.screen_size.y) {
 		return
 	}
 	self.position = new_position
@@ -65,14 +63,6 @@ set_entity_position :: proc(self: ^Entity, new_position: Coordinate2D, game_ctx:
 	self.position = new_position
 }
 
-no_action :: proc() -> string {
-	return "..."
-}
+do_nothing_on_collision :: proc(self: ^Entity, other: ^Entity, ctx: ^World) {}
 
-action_say_miaouh :: proc() -> string {
-	return "Miaouh!"
-}
-
-action_say_grrh :: proc() -> string {
-	return "Grrrrh..."
-}
+do_nothing_on_input :: proc(self: ^Entity, ctx: ^World) {}

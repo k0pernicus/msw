@@ -143,8 +143,8 @@ main :: proc() {
 				strings.clone(entity.id),
 				entity.texture_id,
 				entity.position,
-				on_click = engine.action_say_miaouh,
-				on_hover = engine.action_say_grrh,
+				on_collision = engine.do_nothing_on_collision,
+				on_input = engine.do_nothing_on_input,
 			),
 		)
 	}
