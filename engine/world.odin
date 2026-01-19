@@ -4,15 +4,18 @@ import rl "vendor:raylib"
 
 // Stored all objects related to a World
 World :: struct {
-	// To be freed with `deleteWorld` function
-	// when the world is not used anymore
-	// entities: [dynamic]Entity,
-	entities:    [dynamic]Entity,
-	assets:      ^AssetContext,
-	camera:      Camera2D,
-	cursor:      Cursor,
-	screen_size: [2]u32, // width, height
-	grid:        SpatialGrid, // Lookup table of entities
+	player:       ^Entity,
+	entities:     [dynamic]Entity,
+	assets:       ^AssetContext,
+	camera:       Camera2D,
+	cursor:       Cursor,
+	screen_size:  [2]u32, // width, height
+	grid:         SpatialGrid, // Lookup table of entities
+	// Level streaming
+	scroll_speed: f32,
+	distance_run: f32,
+	// Physics
+	gravity:      f32,
 }
 
 init_world :: proc(self: ^World, asset_ctx: ^AssetContext, screen_width, screen_height: u32) {

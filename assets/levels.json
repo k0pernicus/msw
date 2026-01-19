@@ -1,1 +1,1 @@
-[{"name":"level1","dimensions":[1440,720],"entities":[{"id":"entity_4","texture_id":"jungle_char_idle","position":[768.00000000,192.00000000]},{"id":"entity_1","texture_id":"jungle_char_ledge_grab","position":[400.00000000,432.00000000]}],"tiles":[]}]
+[{"name":"level1","dimensions":[1440,720],"entities":[{"id":"entity_0","texture_id":"jungle_char_run","position":[704.00000000,336.00000000]}],"tiles":[]}]

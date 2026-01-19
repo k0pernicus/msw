@@ -93,12 +93,14 @@ update_game :: proc(self: ^GameContext) {
 	get_inputs(self)
 	camera_movement(self)
 	self.world.cursor.position = get_mouse_world_position(&self.world.camera)
+	// Remove the entities to put in the grid
+	update_entities(&self.world.entities)
 	// This boolean is used to change the cursor (TODO)
-	pointing_to_entity: bool = false
 	register_entities_in_grid(&self.world.grid, self.world.entities[:])
 	// Submit change of cursor
-	cursorStyle := pointing_to_entity ? CursorStyle.Pointing : CursorStyle.Default
-	submit_draw_command(self, new_style{cursorStyle})
+	// pointing_to_entity: bool = false
+	// cursorStyle := pointing_to_entity ? CursorStyle.Pointing : CursorStyle.Default
+	// submit_draw_command(self, new_style{cursorStyle})
 
 	if self.editor_context.enabled {
 		update_editor_logic(self)
